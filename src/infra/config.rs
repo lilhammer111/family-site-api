@@ -7,7 +7,7 @@ use log::LevelFilter;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-pub struct Setup {
+pub struct Settings {
     pub server_addr: String,
     pub pg: PgConfig,
     pub log: LogConfig,
@@ -19,12 +19,14 @@ pub struct LogConfig {
     pub color_mode: String, // always auto never
 }
 
-impl Setup {
-    pub fn default_init() -> Self {
-        Setup::default()
-    }
 
-    pub fn init_logger(&mut self) ->&mut Self {
+
+impl Settings {
+    pub fn everything_is_ok(self) -> Self {
+        self.init_logger()
+            .init_pg()
+    }
+    fn init_logger(self) -> Self {
         let mut builder = Builder::from_default_env();
 
         builder.filter(None, LevelFilter::from_str(&self.log.level).unwrap_or(LevelFilter::Info));
@@ -41,13 +43,13 @@ impl Setup {
         self
     }
 
-    pub fn init_pg(&mut self) ->&mut Self {
+    fn init_pg(self) -> Self {
         println!("init pg");
         self
     }
 }
 
-impl Default for Setup {
+impl Default for Settings {
     fn default() -> Self {
         dotenv().expect("Failed to load .env file");
 
@@ -56,7 +58,7 @@ impl Default for Setup {
             .build()
             .expect("Failed to build the config object");
 
-        let setup: Setup = config.try_deserialize().expect("Failed to bind config to setup");
+        let setup: Settings = config.try_deserialize().expect("Failed to bind config to setup");
 
         setup
     }
@@ -65,11 +67,11 @@ impl Default for Setup {
 
 #[cfg(test)]
 mod tests {
-    use crate::setup::setup::Setup;
+    use crate::infra::config::Settings;
 
     #[test]
     fn setup_works() {
-        let setup = Setup::default();
+        let setup = Settings::default();
         assert_eq!(setup.server_addr, "127.0.0.1:8080".to_owned());
         assert_eq!(setup.pg.host, Some("127.0.0.1".to_owned()));
         assert_eq!(setup.pg.port, Some(5432));

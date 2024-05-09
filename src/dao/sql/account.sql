@@ -1,0 +1,5 @@
+CREATE TABLE account (
+	id  BIGSERIAL PRIMARY KEY,
+	username    VARCHAR(100) UNIQUE NOT NULL,
+	password    VARCHAR(100)
+);

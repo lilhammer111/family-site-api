@@ -1,5 +1,5 @@
 [package]
-name = "family-api"
+name = "ham-fam-api"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4"
+actix-cors = "0.7.0"
 serde = "1.0.200"
 dotenv = "0.15.0"
 deadpool-postgres = { version = "0.13.0", features = ["serde"] }
