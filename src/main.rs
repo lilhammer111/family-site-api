@@ -9,18 +9,22 @@ use actix_web::{HttpServer, App, web};
 use actix_web::http::{Method, header};
 use actix_web::middleware::Logger;
 use actix_web::web::Data;
+use log::info;
 use tokio_postgres::NoTls;
 
-
-use infra::config::Settings;
 use biz::account::handler::{login, register};
+use crate::infra::init::Initializer;
 
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
-    let  setup = Settings::default().everything_is_ok();
+    let initializer = Initializer::default()
+        .must_init()
+        .expect("Failed to init setup");
 
-    let pool = setup.pg.create_pool(None, NoTls).expect("Failed to create a pg pool");
+    let settings = initializer.settings();
+
+    let pool = settings.pg.create_pool(None, NoTls).expect("Failed to create a pg pool");
 
     let server = HttpServer::new(move || {
         let app = App::new();
@@ -60,5 +64,11 @@ async fn main() -> io::Result<()> {
         app.service(api)
     });
 
-    server.bind(setup.server_addr)?.run().await
+    info!("Running on {}:{}",settings.ip, settings.port);
+    info!("Log Level is {}",settings.log.level);
+
+    server
+        .bind(format!("{}:{}", settings.ip, settings.port))?
+        .run()
+        .await
 }

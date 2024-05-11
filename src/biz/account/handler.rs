@@ -1,5 +1,6 @@
 use actix_web::{Error, HttpResponse, post, web};
 use deadpool_postgres::{Client as PgClient, Pool};
+use log::debug;
 use serde::Serialize;
 use super::model::{Account, add_account, get_account_pwd};
 use crate::error::DbError;
@@ -12,12 +13,25 @@ async fn login(pg_pool: web::Data<Pool>, account_json: web::Json<Account>) -> Re
     let account = account_json.into_inner();
     let pc: PgClient = pg_pool.get().await.map_err(DbError::PoolError)?;
 
-    let pwd = get_account_pwd(&pc, &account.username).await?;
+    debug!("pc is {:#?}", pc);
 
-    if pwd == account.password {
-        Ok(HttpResponse::Ok().json(Empty {}))
-    } else {
-        Ok(HttpResponse::Unauthorized().json(Empty {}))
+    let res = get_account_pwd(&pc, &account.username).await;
+
+    match res {
+        Ok(pwd) => {
+            if pwd == account.password {
+                Ok(HttpResponse::Ok().json(Empty {}))
+            } else {
+                Ok(HttpResponse::Unauthorized().json(Empty {}))
+            }
+        }
+        Err(e) => {
+            debug!("{}",e);
+            match e {
+                DbError::NotFound => Ok(HttpResponse::Unauthorized().json(Empty {})),
+                _ => { Ok(HttpResponse::InternalServerError().json(Empty {})) }
+            }
+        }
     }
 }
 
@@ -31,7 +45,7 @@ async fn register(pg_pool: web::Data<Pool>, account_json: web::Json<Account>) ->
         Err(_) => {
             let account = add_account(&pc, account).await?;
             Ok(HttpResponse::Ok().json(account))
-        },
+        }
         Ok(_) => {
             Ok(HttpResponse::Conflict().json(Empty {}))
         }
