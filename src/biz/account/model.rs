@@ -23,7 +23,7 @@ pub async fn get_account_pwd(pc: &PgClient, username: &str) -> Result<String, Db
         .map(|row| row.get("password"))
 }
 
-pub async fn add_account(pc: &PgClient, account: Account) -> Result<Account, DbError> {
+pub async fn add_account(pc: &PgClient, account: &Account) -> Result<Account, DbError> {
     let stmt = "INSERT INTO account(username, password) VALUES ($1, $2) RETURNING *";
 
     pc

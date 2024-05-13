@@ -1,6 +1,6 @@
 use actix_web::{Error, HttpResponse, post, web};
 use deadpool_postgres::{Client as PgClient, Pool};
-use log::debug;
+use log::{debug, info};
 use serde::Serialize;
 use super::model::{Account, add_account, get_account_pwd};
 use crate::error::DbError;
@@ -20,16 +20,16 @@ async fn login(pg_pool: web::Data<Pool>, account_json: web::Json<Account>) -> Re
     match res {
         Ok(pwd) => {
             if pwd == account.password {
-                Ok(HttpResponse::Ok().json(Empty {}))
+                Ok(HttpResponse::Ok().body("{}"))
             } else {
-                Ok(HttpResponse::Unauthorized().json(Empty {}))
+                Ok(HttpResponse::Unauthorized().body("{}"))
             }
         }
         Err(e) => {
-            debug!("{}",e);
+            info!("Failed to verify authentication: {}",e);
             match e {
-                DbError::NotFound => Ok(HttpResponse::Unauthorized().json(Empty {})),
-                _ => { Ok(HttpResponse::InternalServerError().json(Empty {})) }
+                DbError::NotFound => Ok(HttpResponse::Unauthorized().body("{}")),
+                _ => { Ok(HttpResponse::InternalServerError().body("{}")) }
             }
         }
     }
@@ -43,8 +43,11 @@ async fn register(pg_pool: web::Data<Pool>, account_json: web::Json<Account>) ->
 
     match get_account_pwd(&pc, &account.username).await {
         Err(_) => {
-            let account = add_account(&pc, account).await?;
-            Ok(HttpResponse::Ok().json(account))
+            let res = add_account(&pc, &account).await;
+            match res {
+                Ok(_) => Ok(HttpResponse::Created().body("{}")),
+                Err(_) => Ok(HttpResponse::InternalServerError().body("{}")),
+            }
         }
         Ok(_) => {
             Ok(HttpResponse::Conflict().json(Empty {}))
