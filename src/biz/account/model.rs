@@ -7,15 +7,15 @@ use crate::error::DbError;
 #[derive(Deserialize, PostgresMapper, Serialize)]
 #[pg_mapper(table = "account")]
 pub struct Account {
-    pub account_name: String,
+    pub username: String,
     pub password: String,
 }
 
-pub async fn get_account_pwd(pc: &PgClient, account_name: &str) -> Result<String, DbError> {
-    let stmt = "SELECT password FROM account WHERE account_name = $1";
+pub async fn get_account_pwd(pc: &PgClient, username: &str) -> Result<String, DbError> {
+    let stmt = "SELECT password FROM account WHERE username = $1";
 
     pc
-        .query(stmt, &[&account_name])
+        .query(stmt, &[&username])
         .await?
         .iter()
         .next()
@@ -23,14 +23,14 @@ pub async fn get_account_pwd(pc: &PgClient, account_name: &str) -> Result<String
         .map(|row| row.get("password"))
 }
 
-pub async fn add_account(pc: &PgClient, account: Account) -> Result<Account, DbError> {
-    let stmt = "INSERT INTO account(account_name, password) VALUES ($1, $2) RETURNING *";
+pub async fn add_account(pc: &PgClient, account: &Account) -> Result<Account, DbError> {
+    let stmt = "INSERT INTO account(username, password) VALUES ($1, $2) RETURNING *";
 
     pc
         .query(
             stmt,
             &[
-                &account.account_name,
+                &account.username,
                 &account.password,
             ],
         )

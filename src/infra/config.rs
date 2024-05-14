@@ -1,0 +1,20 @@
+use deadpool_postgres::{Config as PgConfig};
+use serde::Deserialize;
+
+#[derive(Deserialize, Debug, Default)]
+pub struct Settings {
+    pub ip: String,
+    pub port: String,
+
+    pub pg: PgConfig,
+    pub log: LogConfig,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct LogConfig {
+    pub level: String,
+    pub color_mode: String, // always auto never
+}
+
+
+impl Settings {}

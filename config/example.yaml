@@ -1,0 +1,11 @@
+ip: 127.0.0.1
+port: 8000
+pg:
+  host:
+  port: 5432
+  user: postgres
+  password:
+  dbname: postgres
+log:
+  level: debug
+  color_mode: always
