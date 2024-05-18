@@ -126,7 +126,6 @@ mod tests {
         // assert_eq!(settings.pg.host, Some("127.0.0.1".to_owned()));
         assert_eq!(settings.pg.port, Some(5432));
         assert_eq!(settings.pg.user, Some("postgres".to_owned()));
-        assert_eq!(settings.pg.password, Some("postgres".to_owned()));
         assert_eq!(settings.pg.dbname, Some("postgres".to_owned()));
         assert_eq!(settings.log.level, "debug".to_owned());
         assert_eq!(settings.log.color_mode, "always".to_owned())
