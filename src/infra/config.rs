@@ -5,7 +5,8 @@ use serde::Deserialize;
 pub struct Settings {
     pub ip: String,
     pub port: String,
-
+    pub jwt_secret: String,
+    pub static_file_path: String,
     pub pg: PgConfig,
     pub log: LogConfig,
 }

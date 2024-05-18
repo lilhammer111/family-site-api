@@ -1,0 +1,14 @@
+ip: 127.0.0.1
+port: 8000
+pg:
+  host: your_pg_host
+  port: 5432
+  user: postgres
+  password: your_pwd
+  dbname: postgres
+log:
+  level: debug
+  color_mode: always
+jwt_secret: your_jwt_secret
+static_file_path: your_file_path
+
