@@ -1,12 +1,13 @@
 use actix_web::{HttpResponse, ResponseError};
 use deadpool_postgres::PoolError;
-use derive_more::{Display};
+use derive_more::Display;
 use tokio_postgres::error::SqlState;
 
 #[derive(Display, Debug)]
 pub enum BizError {
     JwtError,
     NotFound,
+    #[allow(dead_code)]
     CreatedError,
     PgError(tokio_postgres::Error),
     PgMapperError(tokio_pg_mapper::Error),

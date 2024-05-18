@@ -1,9 +1,10 @@
-use actix_web::{dev::{Service, ServiceRequest, ServiceResponse, Transform}, Error, HttpMessage, HttpResponse};
+use actix_web::{dev::{Service, ServiceRequest, ServiceResponse, Transform}, Error, HttpMessage};
 use actix_web::dev::forward_ready;
 use futures_util::{future::{Ready, ready, LocalBoxFuture}};
 use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
 use serde::{Deserialize, Serialize};
-use crate::infra::config::Settings;
+use crate::AppState;
+use crate::infra::error::BizError;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Claims {
@@ -44,13 +45,13 @@ impl<S, B> Service<ServiceRequest> for JwtMiddlewareService<S>
 
     forward_ready!(service);
 
-    fn call(&self, mut req: ServiceRequest) -> Self::Future {
-        let secret_key = if let Some(data) = req.app_data::<Settings>() {
-            data.jwt_secret.clone()
+    fn call(&self, req: ServiceRequest) -> Self::Future {
+        let secret_key = if let Some(app_state) = req.app_data::<AppState>() {
+            app_state.jwt_secret.clone()
         } else {
             return Box::pin(
                 async {
-                    Err(Error::from(HttpResponse::InternalServerError().finish()))
+                    Err(BizError::JwtError.into())
                 }
             );
         };
@@ -80,7 +81,9 @@ impl<S, B> Service<ServiceRequest> for JwtMiddlewareService<S>
                     req.extensions_mut().insert(data.claims);
                 }
                 Err(_) => {
-                    return Box::pin(async { Err(Error::from(HttpResponse::Unauthorized().finish())) });
+                    return Box::pin(
+                        async { Err(BizError::JwtError.into()) }
+                    );
                 }
             }
         }

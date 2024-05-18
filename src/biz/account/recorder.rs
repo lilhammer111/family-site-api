@@ -1,14 +1,14 @@
 use bcrypt::{DEFAULT_COST, hash};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use tokio_pg_mapper_derive::PostgresMapper;
 use deadpool_postgres::{Client as PgClient, GenericClient};
 use tokio_pg_mapper::FromTokioPostgresRow;
 use chrono::{NaiveDate};
-// use chrono::NaiveDateTime;
+use chrono::NaiveDateTime;
+use log::debug;
 use crate::infra::error::BizError;
 
-
-#[derive(Deserialize, PostgresMapper, Serialize, Debug)]
+#[derive(Deserialize, PostgresMapper, Debug)]
 #[pg_mapper(table = "account")]
 pub struct Account {
     pub id: i64,
@@ -21,34 +21,59 @@ pub struct Account {
     pub birthday: Option<NaiveDate>, // Optional and using NaiveDate for DATE type
     pub industry: Option<String>, // Optional since the industry can be NULL
     pub location: Option<String>, // Optional since the location can be NULL
-    pub social_account: Vec<String>, // Using Vec<String> for TEXT[] type
-    // todo: 些许复杂明天再写
-    pub create_at: NaiveDate, // Using NaiveDateTime for TIMESTAMP
-    pub update_at: NaiveDate, // Using NaiveDateTime for TIMESTAMP
+    pub social_account: Option<Vec<String>>, // Using Vec<String> for TEXT[] type
+    pub created_at: NaiveDateTime, // Using NaiveDateTime for TIMESTAMP
+    pub updated_at: NaiveDateTime, // Using NaiveDateTime for TIMESTAMP
 }
+
+const QUERY_MORE_THAN_ONE: &str = "query returned an unexpected number of rows";
 
 pub async fn find_account(pc: &PgClient, username: &str) -> Result<Account, BizError> {
     let stmt = "SELECT * FROM account WHERE username = $1";
 
+    // pc
+    //     .query(stmt, &[&username])
+    //     .await?
+    //     .iter()
+    //     .map(|row_ref| Account::from_row_ref(row_ref)?)
+    //     .collect::<Vec<Account>>()
+    //     .pop()
+    //     .ok_or(BizError::NotFound)
+
+
     let row = pc
         .query_one(stmt, &[&username])
-        .await?;
+        .await
+        .map_err(|err| {
+            if err.to_string() == QUERY_MORE_THAN_ONE {
+                BizError::NotFound
+            } else {
+                BizError::PgError(err)
+            }
+        })?;
 
-    Account::from_row_ref(&row).map_err(Into::into)
+    Account::from_row_ref(&row).map_err(|e| {
+        debug!("from row ref: {:?}", e);
+        Into::into(e)
+    })
 }
 
-pub async fn add_account(pc: &PgClient, account: &Account) -> Result<Account, BizError> {
-    let hashed_pwd = hash(&account.password, DEFAULT_COST)?;
+pub async fn add_account(pc: &PgClient, username: &str, password: &str) -> Result<Account, BizError> {
+    let hashed_pwd = hash(password, DEFAULT_COST)?;
 
     let stmt = "INSERT INTO account(username, password) VALUES ($1, $2) RETURNING *";
 
     let row = pc
-        .query_one(stmt, &[&account.username, &hashed_pwd])
+        .query_one(stmt, &[&username.to_string(), &hashed_pwd])
         .await?;
 
-    Account::from_row_ref(&row).map_err(Into::into)
+    Account::from_row_ref(&row).map_err(|e| {
+        debug!("from row ref: {:?}", e);
+        Into::into(e)
+    })
 }
 
+#[allow(dead_code)]
 pub async fn update_account(pc: &PgClient, account: &Account) -> Result<Account, BizError> {
     let hashed_pwd = hash(&account.password, DEFAULT_COST)?;
 

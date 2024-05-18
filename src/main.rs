@@ -9,6 +9,7 @@ use actix_web::{App, HttpServer, web};
 use actix_web::http::{header, Method};
 use actix_web::middleware::Logger;
 use actix_web::web::Data;
+use deadpool_postgres::Pool;
 use log::info;
 use tokio_postgres::NoTls;
 
@@ -19,23 +20,33 @@ use crate::infra::{
     middleware::jwt::JwtMiddleware,
 };
 
+#[derive(Clone)]
+struct AppState {
+    jwt_secret: String,
+    pool: Pool,
+}
+
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
     let initializer = Initializer::default()
         .must_init()
         .expect("Failed to init setup");
-
-    let settings = initializer.settings();
+    let settings =initializer.settings().clone();
 
     let pool = settings.pg.create_pool(None, NoTls).expect("Failed to create a pg pool");
+
+    let app_state = AppState {
+        jwt_secret: settings.jwt_secret ,
+        pool: pool.clone(),
+    };
+
+
 
     let server = HttpServer::new(move || {
         let app = App::new();
 
-        let app = app.app_data(Data::new(settings.clone()));
-
-        let app = app.app_data(Data::new(pool.clone()));
+        let app = app.app_data(Data::new(app_state.clone()));
 
         let cors = Cors::default()
             .allow_any_origin()
@@ -59,8 +70,6 @@ async fn main() -> io::Result<()> {
 
         let app = app.wrap(cors);
 
-        let app = app.wrap(JwtMiddleware);
-
         let app = app.wrap(Logger::new("%a | %t | %r | %s | %Ts"));
 
         let account = web::scope("/account")
@@ -68,7 +77,8 @@ async fn main() -> io::Result<()> {
             .service(register);
 
         let avatar = web::scope("/avatar")
-            .service(upload);
+            .service(upload)
+            .wrap(JwtMiddleware);
 
         let api = web::scope("/api")
             .service(account)
