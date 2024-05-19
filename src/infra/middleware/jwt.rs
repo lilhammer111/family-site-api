@@ -2,15 +2,19 @@ use actix_web::{dev::{Service, ServiceRequest, ServiceResponse, Transform}, Erro
 use actix_web::dev::forward_ready;
 use futures_util::{future::{Ready, ready, LocalBoxFuture}};
 use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
+use log::debug;
 use serde::{Deserialize, Serialize};
 use crate::AppState;
-use crate::infra::error::BizError;
+use crate::infra::error::biz_err::BizError;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Claims {
-    pub sub: i64, // 用户标识
-    pub exp: i64,  // 过期时间
+    pub sub: i64, // user_id
+    pub exp: i64,  // expires
 }
+
+pub const JWT_AUTH_KEY: &str = "auth_token";
+
 
 pub struct JwtMiddleware;
 
@@ -46,32 +50,30 @@ impl<S, B> Service<ServiceRequest> for JwtMiddlewareService<S>
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        let secret_key = if let Some(app_state) = req.app_data::<AppState>() {
-            app_state.jwt_secret.clone()
-        } else {
-            return Box::pin(
-                async {
-                    Err(BizError::JwtError.into())
-                }
-            );
-        };
+        let secret_key: String;
+
+        debug!("req: {:#?}", req);
+
+        req.app_data()
+
+        match req.app_data::<AppState>() {
+            Some(data) => {
+                secret_key = data.jwt_secret.clone();
+            },
+            None => {
+                debug!("Failed to get data from AppState");
+                return Box::pin(
+                    async {
+                        Err(BizError::JwtError.into())
+                    }
+                );
+            },
+        }
 
 
-        let token = if let Some(auth_header) = req.headers().get("Authorization") {
-            if let Ok(auth_str) = auth_header.to_str() {
-                if auth_str.starts_with("Bearer ") {
-                    Some(auth_str[7..].to_string())
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        let some_token = req.cookie(JWT_AUTH_KEY).map(|cookie| cookie.to_string());
 
-        if let Some(token) = token {
+        if let Some(token) = some_token {
             match decode::<Claims>(
                 &token,
                 &DecodingKey::from_secret(secret_key.as_ref()),

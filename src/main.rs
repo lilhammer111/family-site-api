@@ -14,10 +14,13 @@ use log::info;
 use tokio_postgres::NoTls;
 
 use biz::account::handler::{login, register};
+use crate::biz::account::handler::get_user_info;
 use crate::biz::file::handler::save;
 use crate::infra::{
     init::Initializer,
 };
+use crate::infra::middleware::jwt::JwtMiddleware;
+
 
 #[derive(Clone)]
 struct AppState {
@@ -35,7 +38,7 @@ async fn main() -> io::Result<()> {
 
     let pool = settings.pg.create_pool(None, NoTls).expect("Failed to create a pg pool");
 
-    let app_state = AppState {
+    let data = AppState {
         jwt_secret: settings.jwt_secret,
         pool: pool.clone(),
     };
@@ -44,7 +47,7 @@ async fn main() -> io::Result<()> {
     let server = HttpServer::new(move || {
         let app = App::new();
 
-        let app = app.app_data(Data::new(app_state.clone()));
+        let app = app.app_data(Data::new(data.clone()));
 
         let cors = Cors::default()
             .allow_any_origin()
@@ -66,24 +69,31 @@ async fn main() -> io::Result<()> {
             )
             .max_age(3600);
 
-        let app = app.wrap(cors);
+        let app = app
+            .wrap(Logger::new("%a | %t | %r | %s | %Ts"))
+            .wrap(cors);
 
-        let app = app.wrap(Logger::new("%a | %t | %r | %s | %Ts"));
 
         let account_scope = web::scope("/account")
             .service(login)
-            .service(register)
-            .service(save);
+            .service(register);
+
+
+        let user_scope = web::scope("/user")
+            .wrap(JwtMiddleware)
+            .service(get_user_info);
 
         let file_scope = web::scope("/file")
+            .wrap(JwtMiddleware)
             .service(save);
-        // .wrap(JwtMiddleware);
 
-        let api = web::scope("/api")
+        let api_service = web::scope("/api")
             .service(account_scope)
+            .service(user_scope)
             .service(file_scope);
 
-        let static_file = web::scope("/static")
+        let static_file_service = web::scope("/static")
+            .wrap(JwtMiddleware)
             .service(
                 actix_files::Files::new("/files", &settings.static_file_path)
                     .show_files_listing()
@@ -91,7 +101,8 @@ async fn main() -> io::Result<()> {
                     .use_last_modified(true)
             );
 
-        app.service(api).service(static_file)
+        app.service(api_service)
+            .service(static_file_service)
     });
 
     info!("Running on {}:{}",settings.ip, settings.port);

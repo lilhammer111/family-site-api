@@ -1,52 +1,47 @@
+use std::fmt::Debug;
+use chrono::{NaiveDate, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Debug)]
-#[serde(tag = "type")]
-pub enum CommMessage {
-    Success,
-    Fail,
-    #[allow(dead_code)]
-    Other(String),
+pub struct RespDataForGettingUser {
+    pub user_id: i64,
+    pub username: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mobile: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pronouns: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub birthday: Option<NaiveDate>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub industry: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub social_account: Option<Vec<String>>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
 }
 
 #[derive(Serialize, Debug)]
-pub struct Communicator<T> {
-    pub message: CommMessage,
-    pub data: T,
-}
-
-#[derive(Serialize, Debug)]
-pub struct EmptyData;
-
-#[derive(Serialize, Debug)]
-pub struct AccountCommunicator<T> {
-    pub communicator: Communicator<T>,
-    pub token: String,
-}
-
-#[derive(Serialize, Debug)]
-pub struct AccountRespData {
+pub struct RespDataForAuth {
     pub user_id: i64,
     pub username: String,
 }
 
+
 #[derive(Deserialize)]
-pub struct AccountReqData {
+pub struct ReqDataForAuth {
     pub username: String,
     pub password: String,
 }
 
-impl<T> AccountCommunicator<T> {
-    pub fn new(message: CommMessage, data: T, token: &str) -> Self
-        where T: Serialize
-    {
-        AccountCommunicator {
-            communicator: Communicator {
-                message,
-                data,
-            },
-            token: token.to_owned(),
-        }
-    }
+#[derive(Serialize, Debug)]
+pub struct Communicator<D> {
+    pub(crate) message: String,
+    pub(crate) data: D
 }
 
