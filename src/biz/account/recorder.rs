@@ -1,3 +1,4 @@
+use std::error::Error;
 use bcrypt::{DEFAULT_COST, hash};
 use serde::{Deserialize};
 use tokio_pg_mapper_derive::PostgresMapper;

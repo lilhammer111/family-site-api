@@ -14,10 +14,9 @@ use log::info;
 use tokio_postgres::NoTls;
 
 use biz::account::handler::{login, register};
-use crate::biz::file::handler::upload;
+use crate::biz::file::handler::save;
 use crate::infra::{
     init::Initializer,
-    middleware::jwt::JwtMiddleware,
 };
 
 #[derive(Clone)]
@@ -32,15 +31,14 @@ async fn main() -> io::Result<()> {
     let initializer = Initializer::default()
         .must_init()
         .expect("Failed to init setup");
-    let settings =initializer.settings().clone();
+    let settings = initializer.settings().clone();
 
     let pool = settings.pg.create_pool(None, NoTls).expect("Failed to create a pg pool");
 
     let app_state = AppState {
-        jwt_secret: settings.jwt_secret ,
+        jwt_secret: settings.jwt_secret,
         pool: pool.clone(),
     };
-
 
 
     let server = HttpServer::new(move || {
@@ -72,21 +70,22 @@ async fn main() -> io::Result<()> {
 
         let app = app.wrap(Logger::new("%a | %t | %r | %s | %Ts"));
 
-        let account = web::scope("/account")
+        let account_scope = web::scope("/account")
             .service(login)
-            .service(register);
+            .service(register)
+            .service(save);
 
-        let avatar = web::scope("/avatar")
-            .service(upload)
-            .wrap(JwtMiddleware);
+        let file_scope = web::scope("/file")
+            .service(save);
+        // .wrap(JwtMiddleware);
 
         let api = web::scope("/api")
-            .service(account)
-            .service(avatar);
+            .service(account_scope)
+            .service(file_scope);
 
         let static_file = web::scope("/static")
             .service(
-                actix_files::Files::new("/avatar", &settings.static_file_path)
+                actix_files::Files::new("/files", &settings.static_file_path)
                     .show_files_listing()
                     .use_etag(true)
                     .use_last_modified(true)

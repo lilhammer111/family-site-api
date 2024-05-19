@@ -1,5 +1,5 @@
 use std::ops::Add;
-use actix_web::{Error, HttpResponse, post, web};
+use actix_web::{Error, get, HttpResponse, post, web};
 use bcrypt::verify;
 use chrono::{Local, TimeDelta};
 use deadpool_postgres::{Client as PgClient};
@@ -7,7 +7,7 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use log::debug;
 use crate::AppState;
 use crate::biz::account::communicator::{CommMessage, EmptyData, AccountCommunicator, AccountRespData, AccountReqData};
-use super::recorder::{add_account, find_account};
+use super::recorder::{add_account, select_account};
 use crate::infra::error::BizError;
 use crate::infra::middleware::jwt::Claims;
 
@@ -34,7 +34,7 @@ async fn login(app_state: web::Data<AppState>, account_json: web::Json<AccountRe
 
     debug!("pg_client is {:#?}", pg_client);
 
-    let queried_account = find_account(&pg_client, &req.username).await?;
+    let queried_account = select_account(&pg_client, &req.username).await?;
 
 
     match verify(req.password, &queried_account.password) {
@@ -74,7 +74,7 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<Accoun
     let req = account_json.into_inner();
     let pg_client: PgClient = app_state.pool.get().await.map_err(BizError::PoolError)?;
 
-    match find_account(&pg_client, &req.username).await {
+    match select_account(&pg_client, &req.username).await {
         Err(e) => {
             debug!("e: {:#?}", e);
 
@@ -111,3 +111,10 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<Accoun
     }
 }
 
+#[get("/{user_id}")]
+async fn get_user_info(path: web::Path<i64>) -> Result<HttpResponse, Error> {
+    let user_id = path.into_inner();
+
+
+    Ok(HttpResponse::Ok().body(""))
+}
