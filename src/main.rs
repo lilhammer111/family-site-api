@@ -14,7 +14,7 @@ use log::info;
 use tokio_postgres::NoTls;
 
 use biz::account::handler::{login, register};
-use crate::biz::account::handler::get_user_info;
+use crate::biz::user::handler::{get_user_info, update_user_info};
 use crate::biz::file::handler::save;
 use crate::infra::{
     init::Initializer,
@@ -35,23 +35,23 @@ async fn main() -> io::Result<()> {
         .must_init()
         .expect("Failed to init setup");
 
-    let settings_data = initializer.settings().clone();
-
     let settings = initializer.settings().clone();
+
+    let pool = settings.pg.create_pool(None, NoTls).expect("Failed to create a pg pool");
+
+    let app_data = AppState {
+        jwt_secret: settings.jwt_secret.clone(),
+        pool: pool.clone(),
+    };
 
     let server = HttpServer::new(move || {
         let app = App::new();
 
+        let app = app.app_data(Data::new(app_data.clone()));
 
-        let pool = settings_data.pg.create_pool(None, NoTls).expect("Failed to create a pg pool");
-
-        let app = app.app_data(Data::new(AppState {
-            jwt_secret: settings_data.jwt_secret.clone(),
-            pool: pool.clone(),
-        }));
 
         let cors = Cors::default()
-            .allow_any_origin()
+            .allowed_origin("http://127.0.0.1:5173")
             .allowed_methods(
                 vec![
                     Method::GET,
@@ -68,6 +68,7 @@ async fn main() -> io::Result<()> {
                     header::CONTENT_TYPE,
                 ]
             )
+            .supports_credentials()
             .max_age(3600);
 
         let app = app
@@ -82,7 +83,8 @@ async fn main() -> io::Result<()> {
 
         let user_scope = web::scope("/user")
             .wrap(JwtMiddleware)
-            .service(get_user_info);
+            .service(get_user_info)
+            .service(update_user_info);
 
         let file_scope = web::scope("/file")
             .wrap(JwtMiddleware)

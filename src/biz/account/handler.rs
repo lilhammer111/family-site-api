@@ -1,5 +1,5 @@
 use std::ops::Add;
-use actix_web::{Error, get, HttpMessage, HttpRequest, HttpResponse, post, web};
+use actix_web::{Error,  HttpResponse, post, web};
 use actix_web::cookie::{Cookie, SameSite};
 use actix_web::cookie::time::OffsetDateTime;
 use bcrypt::verify;
@@ -8,8 +8,8 @@ use deadpool_postgres::{Client as PgClient};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use log::{debug, error};
 use crate::AppState;
-use crate::biz::account::communicator::{Communicator, ReqDataForAuth, RespDataForGettingUser};
-use super::recorder::{add_account, query_account, query_account_by_id};
+use crate::biz::account::communicator::{Communicator, ReqBodyForAuth};
+use super::recorder::{add_account, query_account};
 use crate::infra::error::{biz_err::BizError, infra_err::InfraError};
 use crate::infra::middleware::jwt::{Claims, JWT_AUTH_KEY};
 
@@ -30,7 +30,7 @@ fn generate_token(id: i64, jwt_secret: &[u8], expired_at: i64) -> Result<String,
 }
 
 #[post("/login")]
-async fn login(app_state: web::Data<AppState>, req: web::Json<ReqDataForAuth>) -> Result<HttpResponse, Error> {
+async fn login(app_state: web::Data<AppState>, req: web::Json<ReqBodyForAuth>) -> Result<HttpResponse, Error> {
     let req = req.into_inner();
     let pg_client: PgClient = app_state.pool.get().await.map_err(BizError::PoolError)?;
 
@@ -46,19 +46,20 @@ async fn login(app_state: web::Data<AppState>, req: web::Json<ReqDataForAuth>) -
 
                 let token = generate_token(queried_account.id, app_state.jwt_secret.as_bytes(), expires)?;
 
-                let cookie = Cookie::build(JWT_AUTH_KEY, &token)
-                    .expires(
-                        OffsetDateTime::from_unix_timestamp(expires)
-                            .map_err(|err| InfraError::DepError(err))?
-                    )
-                    .path("/")
-                    .http_only(true)
-                    .same_site(SameSite::Strict)
-                    .finish();
-
                 Ok(
                     HttpResponse::Ok()
-                        .cookie(cookie)
+                        .cookie(
+                            Cookie::build(JWT_AUTH_KEY, &token)
+                                .expires(
+                                    OffsetDateTime::from_unix_timestamp(expires)
+                                        .map_err(|err| InfraError::DepError(err))?
+                                )
+                                .domain("localhost")
+                                .path("/api")
+                                .secure(false)
+                                .same_site(SameSite::None)
+                                .finish()
+                        )
                         .json(
                             Communicator {
                                 message: "login success".to_string(),
@@ -76,7 +77,7 @@ async fn login(app_state: web::Data<AppState>, req: web::Json<ReqDataForAuth>) -
 
 
 #[post("/register")]
-async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqDataForAuth>) -> Result<HttpResponse, Error> {
+async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqBodyForAuth>) -> Result<HttpResponse, Error> {
     let req = account_json.into_inner();
     let pg_client: PgClient = app_state.pool.get().await.map_err(BizError::PoolError)?;
 
@@ -91,19 +92,21 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqDat
 
                 let token = generate_token(created_account.id, app_state.jwt_secret.as_bytes(), expires)?;
 
-                let cookie = Cookie::build(JWT_AUTH_KEY, &token)
-                    .expires(
-                        OffsetDateTime::from_unix_timestamp(expires)
-                            .map_err(|err| InfraError::DepError(err))?
-                    )
-                    .path("/")
-                    .http_only(true)
-                    .same_site(SameSite::Strict)
-                    .finish();
-
                 Ok(
                     HttpResponse::Created()
-                        .cookie(cookie)
+                        .cookie(
+                            Cookie::build(JWT_AUTH_KEY, &token)
+                                .expires(
+                                    OffsetDateTime::from_unix_timestamp(expires)
+                                        .map_err(|err| InfraError::DepError(err))?
+                                )
+                                .domain("127.0.0.1")
+                                .path("/")
+                                .secure(false)
+                                .http_only(true)
+                                .same_site(SameSite::None)
+                                .finish()
+                        )
                         .json(
                             Communicator {
                                 message: "register success".to_string(),
@@ -121,32 +124,4 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqDat
             Ok(HttpResponse::Conflict().body("{}"))
         }
     }
-}
-
-#[get("")]
-async fn get_user_info(req: HttpRequest, app_state: web::Data<AppState>) -> Result<HttpResponse, Error> {
-    let pg_client: PgClient = app_state.pool.get().await.map_err(BizError::PoolError)?;
-
-    let user_id = req.extensions()
-        .get::<Claims>()
-        .ok_or_else(|| BizError::JwtError)?
-        .sub;
-
-    let queried_account = query_account_by_id(&pg_client, user_id).await?;
-
-
-    Ok(HttpResponse::Ok().json(RespDataForGettingUser {
-        user_id,
-        username: queried_account.username,
-        mobile: queried_account.mobile,
-        email: queried_account.email,
-        avatar_url: queried_account.avatar_url,
-        pronouns: queried_account.pronouns,
-        birthday: queried_account.birthday,
-        industry: queried_account.industry,
-        location: queried_account.location,
-        social_account: queried_account.social_account,
-        created_at: queried_account.created_at,
-        updated_at: queried_account.updated_at,
-    }, ))
 }

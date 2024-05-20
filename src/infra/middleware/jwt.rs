@@ -13,7 +13,7 @@ pub struct Claims {
     pub exp: i64,  // expires
 }
 
-pub const JWT_AUTH_KEY: &str = "auth_token";
+pub const JWT_AUTH_KEY: &str = "t";
 
 
 pub struct JwtMiddleware;
