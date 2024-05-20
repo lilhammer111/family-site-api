@@ -22,7 +22,7 @@ use crate::infra::{
 use crate::infra::middleware::jwt::JwtMiddleware;
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct AppState {
     jwt_secret: String,
     pool: Pool,
@@ -34,20 +34,21 @@ async fn main() -> io::Result<()> {
     let initializer = Initializer::default()
         .must_init()
         .expect("Failed to init setup");
+
+    let settings_data = initializer.settings().clone();
+
     let settings = initializer.settings().clone();
-
-    let pool = settings.pg.create_pool(None, NoTls).expect("Failed to create a pg pool");
-
-    let data = AppState {
-        jwt_secret: settings.jwt_secret,
-        pool: pool.clone(),
-    };
-
 
     let server = HttpServer::new(move || {
         let app = App::new();
 
-        let app = app.app_data(Data::new(data.clone()));
+
+        let pool = settings_data.pg.create_pool(None, NoTls).expect("Failed to create a pg pool");
+
+        let app = app.app_data(Data::new(AppState {
+            jwt_secret: settings_data.jwt_secret.clone(),
+            pool: pool.clone(),
+        }));
 
         let cors = Cors::default()
             .allow_any_origin()

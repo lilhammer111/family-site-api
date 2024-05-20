@@ -13,7 +13,6 @@ use super::recorder::{add_account, query_account, query_account_by_id};
 use crate::infra::error::{biz_err::BizError, infra_err::InfraError};
 use crate::infra::middleware::jwt::{Claims, JWT_AUTH_KEY};
 
-
 const TOKEN_SPAN: i64 = 30;
 
 fn generate_token(id: i64, jwt_secret: &[u8], expired_at: i64) -> Result<String, BizError> {
@@ -21,6 +20,8 @@ fn generate_token(id: i64, jwt_secret: &[u8], expired_at: i64) -> Result<String,
         exp: expired_at,
         sub: id,
     };
+
+
     encode(
         &Header::default(),
         &claims,
@@ -126,7 +127,7 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqDat
 async fn get_user_info(req: HttpRequest, app_state: web::Data<AppState>) -> Result<HttpResponse, Error> {
     let pg_client: PgClient = app_state.pool.get().await.map_err(BizError::PoolError)?;
 
-    let user_id= req.extensions()
+    let user_id = req.extensions()
         .get::<Claims>()
         .ok_or_else(|| BizError::JwtError)?
         .sub;

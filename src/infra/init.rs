@@ -7,6 +7,7 @@ use log::LevelFilter;
 
 const ENV_KEY: &str = "FAMILY_API_ENV";
 
+#[derive(Clone)]
 pub struct Initializer {
     config_file_path: String,
     settings: Settings,
