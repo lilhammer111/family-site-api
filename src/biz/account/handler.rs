@@ -55,7 +55,7 @@ async fn login(app_state: web::Data<AppState>, req: web::Json<ReqBodyForAuth>) -
                                         .map_err(|err| InfraError::DepError(err))?
                                 )
                                 .domain("localhost")
-                                .path("/api")
+                                .path("/")
                                 .secure(false)
                                 .same_site(SameSite::None)
                                 .finish()
@@ -100,9 +100,8 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqBod
                                     OffsetDateTime::from_unix_timestamp(expires)
                                         .map_err(|err| InfraError::DepError(err))?
                                 )
-                                .domain("127.0.0.1")
+                                .domain("localhost")
                                 .path("/")
-                                .secure(false)
                                 .http_only(true)
                                 .same_site(SameSite::None)
                                 .finish()

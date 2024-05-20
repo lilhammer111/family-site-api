@@ -5,10 +5,10 @@ use std::io;
 
 use actix_cors::Cors;
 use actix_files;
-use actix_web::{App, HttpServer, web};
+use actix_web::{App, HttpServer};
 use actix_web::http::{header, Method};
 use actix_web::middleware::Logger;
-use actix_web::web::Data;
+use actix_web::web::{self, Data};
 use deadpool_postgres::Pool;
 use log::info;
 use tokio_postgres::NoTls;
@@ -51,6 +51,7 @@ async fn main() -> io::Result<()> {
 
 
         let cors = Cors::default()
+            .allowed_origin("http://localhost:5173")
             .allowed_origin("http://127.0.0.1:5173")
             .allowed_methods(
                 vec![
@@ -66,10 +67,10 @@ async fn main() -> io::Result<()> {
                     header::AUTHORIZATION,
                     header::ACCEPT,
                     header::CONTENT_TYPE,
+                    header::COOKIE,
                 ]
             )
-            .supports_credentials()
-            .max_age(3600);
+            .supports_credentials();
 
         let app = app
             .wrap(Logger::new("%a | %t | %r | %s | %Ts"))

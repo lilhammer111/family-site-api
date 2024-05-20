@@ -70,27 +70,33 @@ impl<S, B> Service<ServiceRequest> for JwtMiddlewareService<S>
         }
 
 
-        let some_token = req.cookie(JWT_AUTH_KEY).map(|cookie| {
-            debug!("cookie: {}",&cookie);
-            cookie.value().to_string()
-        });
+        let token = req.cookie(JWT_AUTH_KEY).map_or_else(
+            || {
+                debug!("Failed to parse cookie");
+                "".to_string()
+            },
+            |cookie| {
+                let token = cookie.value();
+                debug!("token in cookie:{}", token);
+                token.to_string()
+            },
+        );
 
-        if let Some(token) = some_token {
-            match decode::<Claims>(
-                &token,
-                &DecodingKey::from_secret(secret_key.as_bytes()),
-                &Validation::new(Algorithm::default()),
-            ) {
-                Ok(data) => {
-                    debug!("validation success");
-                    req.extensions_mut().insert(data.claims);
-                }
-                Err(e) => {
-                    debug!("validation failed: {:?}",e);
-                    return Box::pin(
-                        async { Err(BizError::JwtError.into()) }
-                    );
-                }
+
+        match decode::<Claims>(
+            &token,
+            &DecodingKey::from_secret(secret_key.as_bytes()),
+            &Validation::new(Algorithm::default()),
+        ) {
+            Ok(data) => {
+                debug!("validation success");
+                req.extensions_mut().insert(data.claims);
+            }
+            Err(e) => {
+                debug!("validation failed: {:?}",e);
+                return Box::pin(
+                    async { Err(BizError::JwtError.into()) }
+                );
             }
         }
 
