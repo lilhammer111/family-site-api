@@ -54,8 +54,6 @@ impl<S, B> Service<ServiceRequest> for JwtMiddlewareService<S>
 
         debug!("req: {:#?}", req);
 
-        req.app_data()
-
         match req.app_data::<AppState>() {
             Some(data) => {
                 secret_key = data.jwt_secret.clone();
