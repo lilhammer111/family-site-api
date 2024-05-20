@@ -27,7 +27,7 @@ pub struct Account {
     pub updated_at: NaiveDateTime, // Using NaiveDateTime for TIMESTAMP
 }
 
-const QUERY_MORE_THAN_ONE: &str = "query returned an unexpected number of rows";
+pub(crate) const QUERY_MORE_THAN_ONE: &str = "query returned an unexpected number of rows";
 
 
 async fn execute_query<T>(pc: &PgClient, stmt: &str, param: T) -> Result<Account, BizError>
@@ -50,17 +50,7 @@ async fn execute_query<T>(pc: &PgClient, stmt: &str, param: T) -> Result<Account
     })
 }
 
-pub async fn query_account_by_id(pc: &PgClient, user_id: i64) -> Result<Account, BizError> {
-    let stmt = r#"
-        SELECT
-            *
-        FROM
-            account
-        WHERE id = $1;
-    "#;
 
-    execute_query(pc, stmt, user_id).await
-}
 
 pub async fn query_account(pc: &PgClient, username: &str) -> Result<Account, BizError> {
     let stmt = r#"
