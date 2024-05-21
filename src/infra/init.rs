@@ -61,6 +61,9 @@ impl Initializer {
 
         builder.filter(None, LevelFilter::from_str(&self.settings.log.level).unwrap_or(LevelFilter::Info));
 
+        // 特定过滤，设置h2模块的日志级别为INFO，过滤掉DEBUG级别的日志
+        builder.filter(Some("h2"), LevelFilter::Info);
+
         let color_mode = match self.settings.log.color_mode.as_str() {
             "always" => { WriteStyle::Always }
             "never" => { WriteStyle::Never }

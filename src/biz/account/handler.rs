@@ -1,5 +1,5 @@
 use std::ops::Add;
-use actix_web::{Error,  HttpResponse, post, web};
+use actix_web::{Error, HttpRequest, HttpResponse, post, web};
 use actix_web::cookie::{Cookie, SameSite};
 use actix_web::cookie::time::OffsetDateTime;
 use bcrypt::verify;
@@ -30,11 +30,10 @@ fn generate_token(id: i64, jwt_secret: &[u8], expired_at: i64) -> Result<String,
 }
 
 #[post("/login")]
-async fn login(app_state: web::Data<AppState>, req: web::Json<ReqBodyForAuth>) -> Result<HttpResponse, Error> {
-    let req = req.into_inner();
+async fn login(app_state: web::Data<AppState>, body: web::Json<ReqBodyForAuth>, req: HttpRequest) -> Result<HttpResponse, Error> {
+    debug!("login req: {:?}", req);
+    let req = body.into_inner();
     let pg_client: PgClient = app_state.pool.get().await.map_err(BizError::PoolError)?;
-
-    debug!("pg_client is {:#?}", pg_client);
 
     let queried_account = query_account(&pg_client, &req.username).await?;
 
@@ -54,10 +53,11 @@ async fn login(app_state: web::Data<AppState>, req: web::Json<ReqBodyForAuth>) -
                                     OffsetDateTime::from_unix_timestamp(expires)
                                         .map_err(|err| InfraError::DepError(err))?
                                 )
-                                .domain("localhost")
+                                .domain("127.0.0.1")
                                 .path("/")
-                                .secure(false)
+                                .secure(true)
                                 .same_site(SameSite::None)
+                                .http_only(true)
                                 .finish()
                         )
                         .json(
@@ -100,10 +100,11 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqBod
                                     OffsetDateTime::from_unix_timestamp(expires)
                                         .map_err(|err| InfraError::DepError(err))?
                                 )
-                                .domain("localhost")
+                                .domain("127.0.0.1")
                                 .path("/")
-                                .http_only(true)
+                                .secure(true)
                                 .same_site(SameSite::None)
+                                .http_only(true)
                                 .finish()
                         )
                         .json(

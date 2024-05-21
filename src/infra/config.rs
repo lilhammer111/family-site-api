@@ -9,6 +9,8 @@ pub struct Settings {
     pub static_file_path: String,
     pub pg: PgConfig,
     pub log: LogConfig,
+    pub path_to_cert_key: String,
+    pub path_to_cert_file: String,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]

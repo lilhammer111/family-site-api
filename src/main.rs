@@ -6,11 +6,12 @@ use std::io;
 use actix_cors::Cors;
 use actix_files;
 use actix_web::{App, HttpServer};
-use actix_web::http::{header, Method};
+use actix_web::http::Method;
 use actix_web::middleware::Logger;
 use actix_web::web::{self, Data};
 use deadpool_postgres::Pool;
 use log::info;
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use tokio_postgres::NoTls;
 
 use biz::account::handler::{login, register};
@@ -37,6 +38,10 @@ async fn main() -> io::Result<()> {
 
     let settings = initializer.settings().clone();
 
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    builder.set_private_key_file(settings.path_to_cert_key, SslFiletype::PEM).unwrap();
+    builder.set_certificate_chain_file(settings.path_to_cert_file).unwrap();
+
     let pool = settings.pg.create_pool(None, NoTls).expect("Failed to create a pg pool");
 
     let app_data = AppState {
@@ -51,8 +56,9 @@ async fn main() -> io::Result<()> {
 
 
         let cors = Cors::default()
-            .allowed_origin("http://localhost:5173")
-            .allowed_origin("http://127.0.0.1:5173")
+            .allowed_origin("https://localhost:5173")
+            .allowed_origin("https://127.0.0.1:5173")
+            .supports_credentials()
             .allowed_methods(
                 vec![
                     Method::GET,
@@ -62,15 +68,7 @@ async fn main() -> io::Result<()> {
                     Method::OPTIONS,
                 ]
             )
-            .allowed_headers(
-                vec![
-                    header::AUTHORIZATION,
-                    header::ACCEPT,
-                    header::CONTENT_TYPE,
-                    header::COOKIE,
-                ]
-            )
-            .supports_credentials();
+            .allow_any_header();
 
         let app = app
             .wrap(Logger::new("%a | %t | %r | %s | %Ts"))
@@ -113,7 +111,7 @@ async fn main() -> io::Result<()> {
     info!("Log Level is {}",settings.log.level);
 
     server
-        .bind(format!("{}:{}", settings.ip, settings.port))?
+        .bind_openssl(format!("{}:{}", settings.ip, settings.port), builder)?
         .run()
         .await
 }
