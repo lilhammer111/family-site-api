@@ -31,7 +31,7 @@ async fn get_user_info(req: HttpRequest, app_state: web::Data<AppState>) -> Resu
 
 #[post("")]
 async fn update_user_info(req: HttpRequest, app_state: web::Data<AppState>, req_body: web::Json<UserReq>) -> Result<HttpResponse, Error> {
-    debug!("{:?}", req_body);
+    debug!("update user req body: {:?}", req_body);
 
     let pg_client: PgClient = app_state.pool.get().await.map_err(BizError::PoolError)?;
 

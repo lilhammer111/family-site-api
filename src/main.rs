@@ -83,15 +83,16 @@ async fn main() -> io::Result<()> {
 
 
         let user_scope = web::scope("/user")
+            .wrap(JwtMiddleware)
             .service(get_user_info)
             .service(update_user_info);
 
         let file_scope = web::scope("/file")
+            .wrap(JwtMiddleware)
             .service(save);
 
         let api_service = web::scope("/api")
             .service(account_scope)
-            .wrap(JwtMiddleware)
             .service(user_scope)
             .service(file_scope);
 

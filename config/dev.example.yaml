@@ -10,5 +10,7 @@ log:
   level: debug
   color_mode: always
 jwt_secret: your_jwt_secret
-static_file_path: your_file_path
+path_to_static_dir: your_static_file_path
+path_to_cert_file: your_cert_file
+path_to_cert_key: your_cert_key_file
 
