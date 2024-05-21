@@ -2,6 +2,7 @@ use actix_web::{Error, get, HttpMessage, HttpRequest, HttpResponse, post, web};
 use crate::AppState;
 use crate::infra::error::biz_err::BizError;
 use deadpool_postgres::{Client as PgClient};
+use log::debug;
 use crate::biz::user::communicaotr::{UserReq, UserResp};
 use crate::biz::user::recorder::{query_account_by_id, update_account};
 use crate::infra::middleware::jwt::Claims;
@@ -30,6 +31,8 @@ async fn get_user_info(req: HttpRequest, app_state: web::Data<AppState>) -> Resu
 
 #[post("")]
 async fn update_user_info(req: HttpRequest, app_state: web::Data<AppState>, req_body: web::Json<UserReq>) -> Result<HttpResponse, Error> {
+    debug!("{:?}", req_body);
+
     let pg_client: PgClient = app_state.pool.get().await.map_err(BizError::PoolError)?;
 
     let info_to_update = req_body.into_inner();

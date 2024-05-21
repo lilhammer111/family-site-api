@@ -6,7 +6,7 @@ pub struct Settings {
     pub ip: String,
     pub port: String,
     pub jwt_secret: String,
-    pub static_file_path: String,
+    pub path_to_static_dir: String,
     pub pg: PgConfig,
     pub log: LogConfig,
     pub path_to_cert_key: String,

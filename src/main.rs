@@ -27,6 +27,7 @@ use crate::infra::middleware::jwt::JwtMiddleware;
 struct AppState {
     jwt_secret: String,
     pool: Pool,
+    path_to_static_dir: String
 }
 
 
@@ -47,6 +48,7 @@ async fn main() -> io::Result<()> {
     let app_data = AppState {
         jwt_secret: settings.jwt_secret.clone(),
         pool: pool.clone(),
+        path_to_static_dir: settings.path_to_static_dir.clone()
     };
 
     let server = HttpServer::new(move || {
@@ -81,23 +83,21 @@ async fn main() -> io::Result<()> {
 
 
         let user_scope = web::scope("/user")
-            .wrap(JwtMiddleware)
             .service(get_user_info)
             .service(update_user_info);
 
         let file_scope = web::scope("/file")
-            .wrap(JwtMiddleware)
             .service(save);
 
         let api_service = web::scope("/api")
             .service(account_scope)
+            .wrap(JwtMiddleware)
             .service(user_scope)
             .service(file_scope);
 
         let static_file_service = web::scope("/static")
-            .wrap(JwtMiddleware)
             .service(
-                actix_files::Files::new("/files", &settings.static_file_path)
+                actix_files::Files::new("/file", &settings.path_to_static_dir)
                     .show_files_listing()
                     .use_etag(true)
                     .use_last_modified(true)
