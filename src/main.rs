@@ -17,6 +17,7 @@ use tokio_postgres::NoTls;
 use biz::account::handler::{login, register};
 use crate::biz::user::handler::{get_user_info, update_user_info};
 use crate::biz::file::handler::save;
+use crate::biz::wish::handler::create_wish;
 use crate::infra::{
     init::Initializer,
 };
@@ -91,10 +92,15 @@ async fn main() -> io::Result<()> {
             .wrap(JwtMiddleware)
             .service(save);
 
+        let wish_scope = web::scope("/wish")
+            .wrap(JwtMiddleware)
+            .service(create_wish);
+
         let api_service = web::scope("/api")
             .service(account_scope)
             .service(user_scope)
-            .service(file_scope);
+            .service(file_scope)
+            .service(wish_scope);
 
         let static_file_service = web::scope("/static")
             .service(

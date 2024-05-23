@@ -7,7 +7,7 @@ use chrono::{NaiveDate};
 use chrono::NaiveDateTime;
 use log::debug;
 use tokio_postgres::types::ToSql;
-use crate::infra::error::biz_err::BizError;
+use crate::infra::error::error::ServerError;
 
 #[derive(Deserialize, PostgresMapper, Debug, Serialize)]
 #[pg_mapper(table = "account")]
@@ -30,19 +30,12 @@ pub struct Account {
 pub(crate) const QUERY_MORE_THAN_ONE: &str = "query returned an unexpected number of rows";
 
 
-async fn execute_query<T>(pc: &PgClient, stmt: &str, param: T) -> Result<Account, BizError>
+async fn execute_query<T>(pc: &PgClient, stmt: &str, param: T) -> Result<Account, ServerError>
     where T: ToSql + Sync
 {
     let row = pc
         .query_one(stmt, &[&param])
-        .await
-        .map_err(|err| {
-            if err.to_string() == QUERY_MORE_THAN_ONE {
-                BizError::NotFound
-            } else {
-                BizError::PgError(err)
-            }
-        })?;
+        .await?;
 
     Account::from_row_ref(&row).map_err(|e| {
         debug!("from row ref: {:?}", e);
@@ -52,7 +45,7 @@ async fn execute_query<T>(pc: &PgClient, stmt: &str, param: T) -> Result<Account
 
 
 
-pub async fn query_account(pc: &PgClient, username: &str) -> Result<Account, BizError> {
+pub async fn query_account(pc: &PgClient, username: &str) -> Result<Account, ServerError> {
     let stmt = r#"
         SELECT
             *
@@ -64,7 +57,7 @@ pub async fn query_account(pc: &PgClient, username: &str) -> Result<Account, Biz
     execute_query(pc, stmt, username).await
 }
 
-pub async fn add_account(pc: &PgClient, username: &str, password: &str) -> Result<Account, BizError> {
+pub async fn add_account(pc: &PgClient, username: &str, password: &str) -> Result<Account, ServerError> {
     let hashed_pwd = hash(password, DEFAULT_COST)?;
 
     let stmt = "INSERT INTO account(username, password) VALUES ($1, $2) RETURNING *";

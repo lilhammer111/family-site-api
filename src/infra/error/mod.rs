@@ -1,2 +1,3 @@
-pub mod biz_err;
-pub mod infra_err;
+pub mod error;
+pub mod biz;
+mod infra;

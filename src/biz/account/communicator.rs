@@ -13,10 +13,3 @@ pub struct ReqBodyForAuth {
     pub username: String,
     pub password: String,
 }
-
-#[derive(Serialize, Debug)]
-pub struct Communicator<D> {
-    pub(crate) message: String,
-    pub(crate) data: D
-}
-
