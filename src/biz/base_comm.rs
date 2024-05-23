@@ -17,17 +17,21 @@ pub struct CommunicatorBuilder<D> {
 pub struct Empty;
 
 impl<D: Default> Communicator<D> {
-    pub fn builder() -> CommunicatorBuilder<D> {
+    pub fn build() -> CommunicatorBuilder<D> {
         CommunicatorBuilder::default()
     }
 
-    // pub fn message(&self) -> &str {
-    //     &self.message
-    // }
-    //
-    // pub fn data(self) -> D {
-    //     self.data
-    // }
+    pub fn brief(message: &str) -> Communicator<D> {
+        Communicator::build()
+            .message(message)
+            .done()
+    }
+
+    pub fn sorry() -> Communicator<D> {
+        Communicator::build()
+            .message("Internal server error due to an unknown reason")
+            .done()
+    }
 }
 
 impl<D: Default> CommunicatorBuilder<D>
@@ -53,7 +57,7 @@ impl<D: Default> CommunicatorBuilder<D>
         }
     }
 
-    pub fn build(self) -> Communicator<D> {
+    pub fn done(self) -> Communicator<D> {
         let CommunicatorBuilder { message, data } = self;
         Communicator {
             message,
@@ -73,7 +77,7 @@ mod tests {
             age: u8,
         }
 
-        let comm = Communicator::builder()
+        let comm = Communicator::build()
             .message("Bad request")
             .data(
                 TestData {
@@ -81,7 +85,7 @@ mod tests {
                     age: 18,
                 }
             )
-            .build();
+            .done();
 
         assert_eq!(comm.message, "Bad request");
         assert_eq!(comm.data.age, "Demon");

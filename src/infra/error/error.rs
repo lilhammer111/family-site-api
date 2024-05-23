@@ -1,15 +1,13 @@
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
-use std::net::IpAddr;
 use actix_web::{HttpResponse, ResponseError};
 use chrono::NaiveDateTime;
-use deadpool_postgres::PoolError;
-use derive_more::Display;
-use env_logger::fmt::Timestamp;
+use jsonwebtoken::errors::ErrorKind;
 use tokio_postgres::error::SqlState;
 use crate::biz::base_comm::{Communicator, Empty};
-use crate::infra::error::biz::{BizError, BizKind};
-use crate::infra::error::infra::InfraError;
+use crate::infra::error::biz::BizKind;
+use crate::infra::error::biz::BizKind::{DataNotFound, TokenInvalid};
+use crate::infra::error::error::Kind::{BizError, InfraError};
 
 #[derive(Debug, PartialEq, Default)]
 pub enum Kind {
@@ -18,13 +16,42 @@ pub enum Kind {
     InfraError,
 }
 
-#[derive(Debug, Display)]
-pub struct ServerError {
+#[derive(Debug)]
+pub struct ServiceError {
     kind: Kind,
+    who: Option<i64>,
+    when: NaiveDateTime,
     because: Box<dyn Error>,
+    message: String,
 }
 
-impl ServerError {
+#[derive(Debug)]
+struct UnknownError;
+
+impl Display for UnknownError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "unknown")
+    }
+}
+
+impl Error for UnknownError {}
+
+impl Display for ServiceError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f,
+               "user: {:?}, at: {}, kind: {:?}, cause: {:?}, extra: {}",
+               self.who(),
+               self.when(),
+               self.kind(),
+               self.because(),
+               self.message()
+        )
+    }
+}
+
+impl Error for ServiceError {}
+
+impl ServiceError {
     pub fn build() -> ServerErrorBuilder {
         ServerErrorBuilder::default()
     }
@@ -34,16 +61,26 @@ impl ServerError {
         &self.kind
     }
 
+    pub fn who(&self) -> &Option<i64> {
+        &self.who
+    }
+
+    pub fn when(&self) -> &NaiveDateTime {
+        &self.when
+    }
+
     pub fn because(&self) -> &Box<dyn Error> {
         &self.because
     }
 
-    pub fn is_biz_err(&self) -> bool {
-        return matches!(&self.kind, Kind::BizError(_));
+    pub fn message(&self) -> &String {
+        &self.message
     }
 
-    pub fn biz_err_kind(&self) -> Option<BizKind> {
-        if let Kind::BizError(biz_kind) = &self.kind() {
+    /// If err belongs to `Kind::Biz` error, return the concrete kind,
+    /// or return `None`
+    pub fn biz_kind(&self) -> Option<BizKind> {
+        if let BizError(biz_kind) = &self.kind() {
             Some(*biz_kind)
         } else {
             None
@@ -51,11 +88,41 @@ impl ServerError {
     }
 }
 
-#[derive(Default)]
-struct ServerErrorBuilder {
+
+#[derive(Debug)]
+pub struct ServerErrorBuilder {
     kind: Kind,
     because: Box<dyn Error>,
+    who: Option<i64>,
+    when: NaiveDateTime,
+    message: String,
 }
+
+impl Display for ServerErrorBuilder {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f,
+               "user: {:?}, at: {}, kind: {:?}, cause: {:?}, extra: {}",
+               self.who,
+               self.when,
+               self.kind,
+               self.because,
+               self.message
+        )
+    }
+}
+
+impl Default for ServerErrorBuilder {
+    fn default() -> Self {
+        Self {
+            kind: Default::default(),
+            because: Box::new(UnknownError {}),
+            who: None,
+            when: Default::default(),
+            message: "".to_string(),
+        }
+    }
+}
+
 
 impl ServerErrorBuilder {
     pub fn belong(self, kind: Kind) -> Self {
@@ -65,88 +132,65 @@ impl ServerErrorBuilder {
         }
     }
 
-    pub fn because(self, because: Box<dyn Error>) -> Self {
+    pub fn because(self, err: Box<dyn Error>) -> Self {
         Self {
-            because,
+            because: err,
             ..self
         }
     }
 
+    // pub fn who(self, who: i64) -> Self {
+    //     Self {
+    //         who: Some(who),
+    //         ..self
+    //     }
+    // }
 
-    pub fn done(self) -> ServerError {
-        ServerError {
+    // pub fn message(self, message: &str) -> Self {
+    //     Self {
+    //         message: message.to_string(),
+    //         ..self
+    //     }
+    // }
+
+
+    pub fn done(self) -> ServiceError {
+        ServiceError {
             kind: self.kind,
             because: self.because,
+            who: self.who,
+            when: Default::default(),
+            message: self.message,
         }
     }
 }
 
-impl From<tokio_postgres::Error> for ServerError {
-    fn from(err: tokio_postgres::Error) -> Self {
-        // 判断错误类型是否为 "No Data Found"
-        if let Some(code) = err.code() {
-            if code == &SqlState::NO_DATA_FOUND {
-                return ServerError {
-                    kind: Kind::BizError(BizKind::DataNotFound),
-                    because: Box::new(
-                        BizError::build()
-                            .message("Data not found in db")
-                            .done()
-                    ),
-                };
-            }
-        }
-        ServerError {
-            kind: Kind::InfraError,
-            because: Box::new(err),
-        }
-    }
-}
-
-impl From<tokio_pg_mapper::Error> for ServerError {
-    fn from(err: tokio_pg_mapper::Error) -> Self {
-        ServerError {
-            kind: Kind::InfraError,
-            because: Box::new(err),
-        }
-    }
-}
-
-
-impl Error for ServerError {}
-
-impl Display for ServerError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "kind: {:?}, cause: {}", self.kind, self.because)
-    }
-}
-
-impl ResponseError for ServerError {
+impl ResponseError for ServiceError {
     fn error_response(&self) -> HttpResponse {
-        match self.biz_err_kind() {
+        match self.biz_kind() {
             // if none, it indicates that the error instance is not type of business error.
             None => {
                 HttpResponse::InternalServerError().json(
-                    Communicator::<Empty>::builder()
+                    Communicator::<Empty>::build()
                         .message("Internal server error")
-                        .build()
+                        .done()
                 )
             }
             // otherwise business error
             Some(biz_err_kind) => {
                 match biz_err_kind {
-                    BizKind::Other => {
-                        HttpResponse::InternalServerError().json(
-                            Communicator::<Empty>::builder()
-                                .message("Internal server error")
-                                .build()
+                    DataNotFound => {
+                        HttpResponse::NotFound().json(
+                            Communicator::<Empty>::build()
+                                .message("Data is not found")
+                                .done()
                         )
                     }
-                    BizKind::DataNotFound => {
-                        HttpResponse::NotFound().json(
-                            Communicator::<Empty>::builder()
-                                .message("Data is not found")
-                                .build()
+                    _ => {
+                        HttpResponse::InternalServerError().json(
+                            Communicator::<Empty>::build()
+                                .message("Internal server error")
+                                .done()
                         )
                     }
                 }
@@ -155,11 +199,58 @@ impl ResponseError for ServerError {
     }
 }
 
-impl From<bcrypt::BcryptError> for ServerError {
+impl From<bcrypt::BcryptError> for ServiceError {
     fn from(err: bcrypt::BcryptError) -> Self {
-        ServerError {
-            kind: Kind::InfraError,
-            because: Box::new(err),
+        ServiceError::build()
+            .belong(InfraError)
+            .because(Box::new(err))
+            .done()
+    }
+}
+
+impl From<tokio_postgres::Error> for ServiceError {
+    fn from(err: tokio_postgres::Error) -> Self {
+        // 判断错误类型是否为 "No Data Found"
+        if let Some(code) = err.code() {
+            if code == &SqlState::NO_DATA_FOUND {
+                return ServiceError::build()
+                    .belong(BizError(DataNotFound))
+                    .because(Box::new(err))
+                    .done();
+            }
+        }
+
+        ServiceError::build()
+            .belong(InfraError)
+            .because(Box::new(err))
+            .done()
+    }
+}
+
+impl From<tokio_pg_mapper::Error> for ServiceError {
+    fn from(err: tokio_pg_mapper::Error) -> Self {
+        ServiceError::build()
+            .belong(InfraError)
+            .because(Box::new(err))
+            .done()
+    }
+}
+
+impl From<jsonwebtoken::errors::Error> for ServiceError {
+    fn from(err: jsonwebtoken::errors::Error) -> Self {
+        match err.kind() {
+            ErrorKind::InvalidToken | ErrorKind::ExpiredSignature => {
+                ServiceError::build()
+                    .belong(BizError(TokenInvalid))
+                    .because(Box::new(err))
+                    .done()
+            }
+            _ => {
+                ServiceError::build()
+                    .belong(InfraError)
+                    .because(Box::new(err))
+                    .done()
+            }
         }
     }
 }

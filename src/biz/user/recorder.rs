@@ -1,12 +1,11 @@
 use deadpool_postgres::{Client as PgClient, GenericClient};
-use log::debug;
 use tokio_pg_mapper::FromTokioPostgresRow;
 use crate::biz::account::recorder::Account;
-use crate::infra::error::biz_err::BizError;
+use crate::infra::error::error::ServiceError;
 
 pub type UserRecorder = Account;
 
-pub async fn update_account<T: Into<UserRecorder>>(pc: &PgClient,user_id: i64, t: T) -> Result<UserRecorder, BizError> {
+pub async fn update_account<T: Into<UserRecorder>>(pc: &PgClient,user_id: i64, t: T) -> Result<UserRecorder, ServiceError> {
     let user = t.into();
 
     let stmt = r#"
@@ -38,23 +37,15 @@ pub async fn update_account<T: Into<UserRecorder>>(pc: &PgClient,user_id: i64, t
             &user.location,
             &user.social_account,
         ])
-        .await
-        .map_err(|err| {
-            if err.to_string() == crate::biz::account::recorder::QUERY_MORE_THAN_ONE {
-                BizError::NotFound
-            } else {
-                BizError::PgError(err)
-            }
-        })?;
+        .await?;
 
-    Account::from_row_ref(&row).map_err(|e| {
-        debug!("from row ref: {:?}", e);
-        Into::into(e)
-    })
+    let account_record = Account::from_row_ref(&row)?;
+
+    Ok(account_record)
 }
 
 
-pub async fn query_account_by_id(pc: &PgClient, user_id: i64) -> Result<UserRecorder, BizError> {
+pub async fn query_account_by_id(pc: &PgClient, user_id: i64) -> Result<UserRecorder, ServiceError> {
     let stmt = r#"
         SELECT
             *
@@ -65,17 +56,9 @@ pub async fn query_account_by_id(pc: &PgClient, user_id: i64) -> Result<UserReco
 
     let row = pc
         .query_one(stmt, &[&user_id, ])
-        .await
-        .map_err(|err| {
-            if err.to_string() == crate::biz::account::recorder::QUERY_MORE_THAN_ONE {
-                BizError::NotFound
-            } else {
-                BizError::PgError(err)
-            }
-        })?;
+        .await?;
 
-    Account::from_row_ref(&row).map_err(|e| {
-        debug!("from row ref: {:?}", e);
-        Into::into(e)
-    })
+    let account_record = Account::from_row_ref(&row)?;
+
+    Ok(account_record)
 }

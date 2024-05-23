@@ -5,7 +5,9 @@ use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
 use log::debug;
 use serde::{Deserialize, Serialize};
 use crate::AppState;
-use crate::infra::error::biz_err::BizError;
+use crate::infra::error::biz::BizKind::TokenInvalid;
+use crate::infra::error::error::Kind::{BizError, InfraError};
+use crate::infra::error::error::ServiceError;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Claims {
@@ -63,7 +65,12 @@ impl<S, B> Service<ServiceRequest> for JwtMiddlewareService<S>
                 debug!("Failed to get data from AppState");
                 return Box::pin(
                     async {
-                        Err(BizError::JwtError.into())
+                        Err(
+                            ServiceError::build()
+                                .belong(InfraError)
+                                .done()
+                                .into()
+                        )
                     }
                 );
             }
@@ -95,7 +102,14 @@ impl<S, B> Service<ServiceRequest> for JwtMiddlewareService<S>
             Err(e) => {
                 debug!("validation failed: {:?}",e);
                 return Box::pin(
-                    async { Err(BizError::JwtError.into()) }
+                    async {
+                        Err(
+                            ServiceError::build()
+                                .belong(BizError(TokenInvalid))
+                                .done()
+                                .into()
+                        )
+                    }
                 );
             }
         }

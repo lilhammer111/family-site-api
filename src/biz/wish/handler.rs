@@ -1,31 +1,29 @@
-use actix_web::{Error, get, HttpMessage, HttpRequest, HttpResponse, post, web};
+use actix_web::{Error, get, HttpRequest, HttpResponse, post, web};
 use crate::AppState;
-use crate::infra::error::biz_err::BizError;
-use deadpool_postgres::{Client as PgClient};
 use crate::biz::base_comm::{Communicator, Empty};
+use crate::biz::internal::{extract_user_id, get_pg};
 use crate::biz::wish::communicator::{WishJson, WishQuery, WishResp};
 use crate::biz::wish::recorder;
-use crate::infra::middleware::jwt::Claims;
 
+
+const MAX_PAGE_SIZE: i64 = 20;
+const MIN_PAGE_SIZE: i64 = 10;
 
 #[post("")]
 pub async fn create_wish(req: HttpRequest, app_state: web::Data<AppState>, body: web::Json<WishJson>) -> Result<HttpResponse, Error> {
-    let pg_client: PgClient = app_state.pool.get().await?;
+    let pg_client = get_pg(&app_state).await?;
 
-    let user_id = req.extensions()
-        .get::<Claims>()
-        .ok_or_else(|| BizError::JwtError)?
-        .sub;
+    let user_id = extract_user_id(req)?;
 
     let wish_json = body.into_inner();
 
     if wish_json.content.is_empty() {
         return Ok(
             HttpResponse::BadRequest().json(
-                Communicator::builder()
+                Communicator::build()
                     .message("Wish content is empty")
                     .data("")
-                    .build()
+                    .done()
             )
         );
     }
@@ -39,7 +37,7 @@ pub async fn create_wish(req: HttpRequest, app_state: web::Data<AppState>, body:
     Ok(
         HttpResponse::Created()
             .json(
-                Communicator::<WishResp>::builder()
+                Communicator::<WishResp>::build()
                     .message("Success to create the wish")
                     .data(
                         wish_record.into()
@@ -48,43 +46,40 @@ pub async fn create_wish(req: HttpRequest, app_state: web::Data<AppState>, body:
     )
 }
 
-const MAX_PAGE_SIZE: i64 = 20;
-const MIN_PAGE_SIZE: i64 = 10;
-
 #[get("/paginated")]
 pub async fn get_paginated_wish(app_state: web::Data<AppState>, wish_params: web::Query<WishQuery>) -> Result<HttpResponse, Error> {
-    let client: PgClient = app_state.pool.get().await?;
+    let pg_client = get_pg(&app_state).await?;
 
     // params validation
     let wish_params = wish_params.into_inner();
 
     if wish_params.page_size <= MIN_PAGE_SIZE {
         return Ok(HttpResponse::BadRequest().json(
-            Communicator::<Empty>::builder()
+            Communicator::<Empty>::build()
                 .message("Page size is too small")
-                .build()
+                .done()
         ));
     }
 
     if wish_params.page_size >= MAX_PAGE_SIZE {
         return Ok(HttpResponse::BadRequest().json(
-            Communicator::<Empty>::builder()
+            Communicator::<Empty>::build()
                 .message("Page size is too big")
-                .build()
+                .done()
         ));
     }
 
-    let total_record = recorder::count(&client).await?;
+    let total_record = recorder::count(&pg_client).await?;
 
     if wish_params.page_number > (total_record / wish_params.page_size + 1) {
         return Ok(HttpResponse::BadRequest().json(
-            Communicator::<Empty>::builder()
+            Communicator::<Empty>::build()
                 .message("Page number is too big")
-                .build()
+                .done()
         ));
     }
 
-    let wish_records =  recorder::select_many(&client,wish_params.page_number, wish_params.page_size)
+    let wish_records = recorder::select_many(&pg_client, wish_params.page_number, wish_params.page_size)
         .await?;
 
     let wish_resp = wish_records.into_iter()
@@ -93,7 +88,7 @@ pub async fn get_paginated_wish(app_state: web::Data<AppState>, wish_params: web
 
     Ok(
         HttpResponse::Ok().json(
-            Communicator::<Vec<WishResp>>::builder()
+            Communicator::<Vec<WishResp>>::build()
                 .message("Success to get wish data")
                 .data(
                     wish_resp
