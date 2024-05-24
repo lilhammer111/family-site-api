@@ -2,44 +2,55 @@ use std::fmt::Debug;
 use serde::Serialize;
 
 #[derive(Serialize, Debug)]
-pub struct Communicator<D> {
+pub struct Communicator<D, O> {
     message: String,
     data: D,
+    extra: Option<O>,
 }
 
 #[derive(Serialize, Debug)]
-pub struct CommunicatorBuilder<D> {
+pub struct CommunicatorBuilder<D, O> {
     message: String,
     data: D,
+    extra: Option<O>,
 }
 
 #[derive(Serialize, Debug, Default)]
 pub struct Empty;
 
-impl<D: Default> Communicator<D> {
-    pub fn build() -> CommunicatorBuilder<D> {
-        CommunicatorBuilder::default()
-    }
+pub type SadCommunicator = Communicator<String, String>;
 
-    pub fn brief(message: &str) -> Communicator<D> {
+impl SadCommunicator {
+    pub fn brief(message: &str) -> Communicator<String, String> {
         Communicator::build()
             .message(message)
             .done()
     }
 
-    pub fn sorry() -> Communicator<D> {
+    pub fn sorry() -> Communicator<String, String> {
         Communicator::build()
             .message("Internal server error due to an unknown reason")
             .done()
     }
 }
 
-impl<D: Default> CommunicatorBuilder<D>
+pub type JoyfulCommunicator<D> = Communicator<D, String>;
+
+impl<D> JoyfulCommunicator<D> {}
+
+impl<D: Default, O: Default> Communicator<D, O> {
+    pub fn build() -> CommunicatorBuilder<D, O> {
+        CommunicatorBuilder::default()
+    }
+}
+
+impl<D: Default, O: Default> CommunicatorBuilder<D, O>
 {
     pub fn default() -> Self {
         Self {
             message: "".to_string(),
             data: D::default(),
+            extra: None,
         }
     }
 
@@ -57,17 +68,23 @@ impl<D: Default> CommunicatorBuilder<D>
         }
     }
 
-    pub fn done(self) -> Communicator<D> {
-        let CommunicatorBuilder { message, data } = self;
+    pub fn extra(self, extra: O) -> Self {
+        Self {
+            extra: Some(extra),
+            ..self
+        }
+    }
+
+    pub fn done(self) -> Communicator<D, O> {
         Communicator {
-            message,
-            data,
+            message: self.message,
+            data: self.data,
+            extra: self.extra,
         }
     }
 }
 
 mod tests {
-
     #[test]
     fn new_communicator() {
         use crate::biz::base_comm::Communicator;

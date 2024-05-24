@@ -15,9 +15,9 @@ use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use tokio_postgres::NoTls;
 
 use biz::account::handler::{login, register};
-use crate::biz::user::handler::{get_user_info, update_user_info};
+use crate::biz::user::handler::{get_user_info, get_user_info_in_batches, update_user_info};
 use crate::biz::file::handler::save;
-use crate::biz::wish::handler::create_wish;
+use crate::biz::wish::handler::{create_wish, get_paginated_wish};
 use crate::infra::{
     init::Initializer,
 };
@@ -28,7 +28,7 @@ use crate::infra::middleware::jwt::JwtMiddleware;
 struct AppState {
     jwt_secret: String,
     pool: Pool,
-    path_to_static_dir: String
+    path_to_static_dir: String,
 }
 
 
@@ -49,7 +49,7 @@ async fn main() -> io::Result<()> {
     let app_data = AppState {
         jwt_secret: settings.jwt_secret.clone(),
         pool: pool.clone(),
-        path_to_static_dir: settings.path_to_static_dir.clone()
+        path_to_static_dir: settings.path_to_static_dir.clone(),
     };
 
     let server = HttpServer::new(move || {
@@ -85,6 +85,7 @@ async fn main() -> io::Result<()> {
 
         let user_scope = web::scope("/user")
             .wrap(JwtMiddleware)
+            .service(get_user_info_in_batches)
             .service(get_user_info)
             .service(update_user_info);
 
@@ -94,13 +95,18 @@ async fn main() -> io::Result<()> {
 
         let wish_scope = web::scope("/wish")
             .wrap(JwtMiddleware)
-            .service(create_wish);
+            .service(create_wish)
+            .service(get_paginated_wish);
+
+        let journal_scope = web::scope("/journal")
+            .wrap(JwtMiddleware);
 
         let api_service = web::scope("/api")
             .service(account_scope)
             .service(user_scope)
             .service(file_scope)
-            .service(wish_scope);
+            .service(wish_scope)
+            .service(journal_scope);
 
         let static_file_service = web::scope("/static")
             .service(

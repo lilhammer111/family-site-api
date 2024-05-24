@@ -6,6 +6,9 @@ use crate::infra::error::error::ServiceError;
 use crate::infra::middleware::jwt::Claims;
 use deadpool_postgres::{Client as PgClient};
 
+pub const MAX_PAGE_SIZE: i64 = 20;
+pub const MIN_PAGE_SIZE: i64 = 10;
+
 pub fn extract_user_id(req: HttpRequest) -> Result<i64, ServiceError> {
     let user_id = req.extensions()
         .get::<Claims>()
@@ -19,7 +22,7 @@ pub fn extract_user_id(req: HttpRequest) -> Result<i64, ServiceError> {
     Ok(user_id)
 }
 
-pub async fn get_pg(app_state: &web::Data<AppState>) ->Result<PgClient, ServiceError> {
+pub async fn get_pg(app_state: &web::Data<AppState>) -> Result<PgClient, ServiceError> {
     app_state.pool
         .get()
         .await

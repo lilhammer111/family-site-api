@@ -3,7 +3,12 @@ use serde::{Deserialize, Serialize};
 use crate::biz::user::recorder::UserRecorder;
 
 #[derive(Serialize, Debug, Deserialize)]
-pub struct UserReq {
+pub struct UserQuery {
+    pub user_ids: Vec<i64>,
+}
+
+#[derive(Serialize, Debug, Deserialize)]
+pub struct UserJson {
     pub username: String,
     pub mobile: Option<String>,
     pub email: Option<String>,
@@ -17,6 +22,7 @@ pub struct UserReq {
 
 #[derive(Serialize, Debug, Deserialize)]
 pub struct UserResp {
+    pub id: i64,
     pub username: String,
     pub mobile: Option<String>,
     pub email: Option<String>,
@@ -33,6 +39,7 @@ pub struct UserResp {
 impl From<UserRecorder> for UserResp {
     fn from(value: UserRecorder) -> Self {
         UserResp {
+            id: value.id,
             username: value.username,
             mobile: value.mobile,
             email: value.email,
@@ -48,7 +55,7 @@ impl From<UserRecorder> for UserResp {
     }
 }
 
-impl Into<UserRecorder> for UserReq {
+impl Into<UserRecorder> for UserJson {
     fn into(self) -> UserRecorder {
         UserRecorder {
             id: 0,

@@ -5,8 +5,11 @@ use crate::biz::internal::{extract_user_id, get_pg, MAX_PAGE_SIZE, MIN_PAGE_SIZE
 use crate::biz::wish::communicator::{WishJson, WishQuery, WishResp};
 use crate::biz::wish::recorder;
 
+
+
+
 #[post("")]
-pub async fn create_wish(req: HttpRequest, app_state: web::Data<AppState>, body: web::Json<WishJson>) -> Result<HttpResponse, Error> {
+pub async fn create_journal(req: HttpRequest, app_state: web::Data<AppState>, body: web::Json<WishJson>) -> Result<HttpResponse, Error> {
     let pg_client = get_pg(&app_state).await?;
 
     let user_id = extract_user_id(req)?;
@@ -43,7 +46,7 @@ pub async fn create_wish(req: HttpRequest, app_state: web::Data<AppState>, body:
 }
 
 #[get("/paginated")]
-pub async fn get_paginated_wish(app_state: web::Data<AppState>, wish_params: web::Query<WishQuery>) -> Result<HttpResponse, Error> {
+pub async fn read_paginated_journal(app_state: web::Data<AppState>, wish_params: web::Query<WishQuery>) -> Result<HttpResponse, Error> {
     let pg_client = get_pg(&app_state).await?;
 
     // params validation

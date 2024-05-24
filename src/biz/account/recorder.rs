@@ -6,7 +6,6 @@ use tokio_pg_mapper::FromTokioPostgresRow;
 use chrono::{NaiveDate};
 use chrono::NaiveDateTime;
 use log::debug;
-use tokio_postgres::types::ToSql;
 use crate::infra::error::error::ServiceError;
 
 #[derive(Deserialize, PostgresMapper, Debug, Serialize)]
@@ -28,23 +27,7 @@ pub struct Account {
 }
 
 
-
-async fn execute_query<T>(pc: &PgClient, stmt: &str, param: T) -> Result<Account, ServiceError>
-    where T: ToSql + Sync
-{
-    let row = pc
-        .query_one(stmt, &[&param])
-        .await?;
-
-    Account::from_row_ref(&row).map_err(|e| {
-        debug!("from row ref: {:?}", e);
-        Into::into(e)
-    })
-}
-
-
-
-pub async fn query_account(pc: &PgClient, username: &str) -> Result<Account, ServiceError> {
+pub async fn select(client: &PgClient, username: &str) -> Result<Vec<Account>, ServiceError> {
     let stmt = r#"
         SELECT
             *
@@ -52,8 +35,14 @@ pub async fn query_account(pc: &PgClient, username: &str) -> Result<Account, Ser
             account
         WHERE username = $1;
     "#;
+    // If no qualified user, raise a BizError of DataNotFound
+    let rows = client
+        .query(stmt, &[&username])
+        .await?;
 
-    execute_query(pc, stmt, username).await
+    rows.iter()
+        .map(|row| Account::from_row_ref(&row).map_err(Into::into))
+        .collect::<Result<Vec<Account>, ServiceError>>()
 }
 
 pub async fn add_account(pc: &PgClient, username: &str, password: &str) -> Result<Account, ServiceError> {

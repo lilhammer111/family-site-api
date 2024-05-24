@@ -8,12 +8,13 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use log::{debug};
 use crate::AppState;
 use crate::biz::account::communicator::ReqBodyForAuth;
-use crate::biz::base_comm::{Communicator, Empty};
+use crate::biz::base_comm::{Communicator, SadCommunicator};
 use crate::biz::internal::get_pg;
 use crate::infra::error::biz::BizKind;
+use crate::infra::error::biz::BizKind::AuthorizationFailed;
 use crate::infra::error::error::ServiceError;
-use crate::infra::error::error::Kind::InfraError;
-use super::recorder::{query_account, add_account};
+use crate::infra::error::error::Kind::{BizError, InfraError};
+use super::recorder::{select, add_account};
 use crate::infra::middleware::jwt::{Claims, JWT_AUTH_KEY};
 
 const TOKEN_SPAN: i64 = 30;
@@ -62,7 +63,15 @@ async fn login(app_state: web::Data<AppState>, body: web::Json<ReqBodyForAuth>, 
 
     let pg_client = get_pg(&app_state).await?;
 
-    let queried_account = query_account(&pg_client, &req.username).await?;
+    let queried_account = select(&pg_client, &req.username)
+        .await?
+        .pop()
+        .ok_or(
+            ServiceError::build()
+                .belong(BizError(AuthorizationFailed))
+                .message("User does not exist")
+                .done()
+        )?;
 
 
     match verify(req.password, &queried_account.password) {
@@ -78,9 +87,7 @@ async fn login(app_state: web::Data<AppState>, body: web::Json<ReqBodyForAuth>, 
                     HttpResponse::Ok()
                         .cookie(cookie)
                         .json(
-                            Communicator::<Empty>::build()
-                                .message("login success")
-                                .done()
+                            SadCommunicator::brief("login success")
                         )
                 )
             } else {
@@ -95,12 +102,12 @@ async fn login(app_state: web::Data<AppState>, body: web::Json<ReqBodyForAuth>, 
 #[post("/register")]
 async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqBodyForAuth>) -> Result<HttpResponse, Error> {
     let req = account_json.into_inner();
-    let pg_client = get_pg(&app_state).await?;
+    let client = get_pg(&app_state).await?;
 
-    match query_account(&pg_client, &req.username).await {
+    match select(&client, &req.username).await {
         Ok(_) => {
             Ok(HttpResponse::Conflict().json(
-                Communicator::<Empty>::brief("Username exists")
+                Communicator::brief("Username exists")
             ))
         }
         Err(err) => {
@@ -110,7 +117,7 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqBod
                 Some(inner_err) => {
                     match inner_err {
                         BizKind::DataNotFound => {
-                            let account_record = add_account(&pg_client, &req.username, &req.password).await?;
+                            let account_record = add_account(&client, &req.username, &req.password).await?;
 
                             let expires = Local::now().add(TimeDelta::hours(TOKEN_SPAN)).timestamp();
 
@@ -122,14 +129,14 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqBod
                                 HttpResponse::Created()
                                     .cookie(cookie)
                                     .json(
-                                        Communicator::<Empty>::brief("Registration succeed")
+                                        Communicator::brief("Registration succeed")
                                     )
                             )
                         }
                         _ => {
                             Ok(
                                 HttpResponse::InternalServerError().json(
-                                    Communicator::<Empty>::sorry()
+                                    Communicator::sorry()
                                 )
                             )
                         }
@@ -138,7 +145,7 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqBod
                 None => {
                     Ok(
                         HttpResponse::InternalServerError().json(
-                            Communicator::<Empty>::sorry()
+                            Communicator::sorry()
                         )
                     )
                 }

@@ -1,11 +1,11 @@
-use deadpool_postgres::{Client as PgClient, GenericClient};
-use tokio_pg_mapper::FromTokioPostgresRow;
+use deadpool_postgres::{Client as PgClient, Client, GenericClient};
+use tokio_pg_mapper::{Error, FromTokioPostgresRow};
 use crate::biz::account::recorder::Account;
 use crate::infra::error::error::ServiceError;
 
 pub type UserRecorder = Account;
 
-pub async fn update_account<T: Into<UserRecorder>>(pc: &PgClient,user_id: i64, t: T) -> Result<UserRecorder, ServiceError> {
+pub async fn update_account<T: Into<UserRecorder>>(pc: &PgClient, user_id: i64, t: T) -> Result<UserRecorder, ServiceError> {
     let user = t.into();
 
     let stmt = r#"
@@ -44,7 +44,6 @@ pub async fn update_account<T: Into<UserRecorder>>(pc: &PgClient,user_id: i64, t
     Ok(account_record)
 }
 
-
 pub async fn query_account_by_id(pc: &PgClient, user_id: i64) -> Result<UserRecorder, ServiceError> {
     let stmt = r#"
         SELECT
@@ -61,4 +60,23 @@ pub async fn query_account_by_id(pc: &PgClient, user_id: i64) -> Result<UserReco
     let account_record = Account::from_row_ref(&row)?;
 
     Ok(account_record)
+}
+
+pub async fn select_many(client: &Client, user_ids: &[i64]) -> Result<Vec<UserRecorder>, ServiceError> {
+    let stmt = r#"
+        SELECT
+            *
+        FROM
+            account
+        WHERE
+            id = ANY($1)
+    "#;
+
+    let rows = client.query(stmt, &[&user_ids]).await?;
+
+    Ok(
+        rows.into_iter()
+            .map(|row| UserRecorder::from_row_ref(&row))
+            .collect::<Result<Vec<UserRecorder>, Error>>()?
+    )
 }

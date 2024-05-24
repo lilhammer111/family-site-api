@@ -1,12 +1,12 @@
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use actix_web::{HttpResponse, ResponseError};
-use chrono::NaiveDateTime;
+use chrono::{NaiveDateTime, Utc};
 use jsonwebtoken::errors::ErrorKind;
 use tokio_postgres::error::SqlState;
-use crate::biz::base_comm::{Communicator, Empty};
+use crate::biz::base_comm::{SadCommunicator};
 use crate::infra::error::biz::BizKind;
-use crate::infra::error::biz::BizKind::{DataNotFound, TokenInvalid};
+use crate::infra::error::biz::BizKind::{DataNotFound, TokenInvalid, AuthorizationFailed};
 use crate::infra::error::error::Kind::{BizError, InfraError};
 
 #[derive(Debug, PartialEq, Default)]
@@ -117,7 +117,7 @@ impl Default for ServerErrorBuilder {
             kind: Default::default(),
             because: Box::new(UnknownError {}),
             who: None,
-            when: Default::default(),
+            when: Utc::now().naive_utc(),
             message: "".to_string(),
         }
     }
@@ -139,16 +139,18 @@ impl ServerErrorBuilder {
         }
     }
 
+
+    pub fn message(self, message: &str) -> Self {
+        Self {
+            message: message.to_string(),
+            ..self
+        }
+    }
+
+
     // pub fn who(self, who: i64) -> Self {
     //     Self {
     //         who: Some(who),
-    //         ..self
-    //     }
-    // }
-
-    // pub fn message(self, message: &str) -> Self {
-    //     Self {
-    //         message: message.to_string(),
     //         ..self
     //     }
     // }
@@ -159,7 +161,7 @@ impl ServerErrorBuilder {
             kind: self.kind,
             because: self.because,
             who: self.who,
-            when: Default::default(),
+            when: self.when,
             message: self.message,
         }
     }
@@ -171,26 +173,25 @@ impl ResponseError for ServiceError {
             // if none, it indicates that the error instance is not type of business error.
             None => {
                 HttpResponse::InternalServerError().json(
-                    Communicator::<Empty>::build()
-                        .message("Internal server error")
-                        .done()
+                    SadCommunicator::sorry()
                 )
             }
             // otherwise business error
             Some(biz_err_kind) => {
                 match biz_err_kind {
+                    AuthorizationFailed => {
+                        HttpResponse::Unauthorized().json(
+                            SadCommunicator::brief("Password or username is incorrect")
+                        )
+                    }
                     DataNotFound => {
                         HttpResponse::NotFound().json(
-                            Communicator::<Empty>::build()
-                                .message("Data is not found")
-                                .done()
+                            SadCommunicator::brief("Data is not found")
                         )
                     }
                     _ => {
                         HttpResponse::InternalServerError().json(
-                            Communicator::<Empty>::build()
-                                .message("Internal server error")
-                                .done()
+                            SadCommunicator::sorry()
                         )
                     }
                 }
@@ -210,6 +211,8 @@ impl From<bcrypt::BcryptError> for ServiceError {
 
 impl From<tokio_postgres::Error> for ServiceError {
     fn from(err: tokio_postgres::Error) -> Self {
+        let err_msg = err.to_string();
+
         // 判断错误类型是否为 "No Data Found"
         if let Some(code) = err.code() {
             if code == &SqlState::NO_DATA_FOUND {
@@ -223,6 +226,7 @@ impl From<tokio_postgres::Error> for ServiceError {
         ServiceError::build()
             .belong(InfraError)
             .because(Box::new(err))
+            .message(&err_msg)
             .done()
     }
 }

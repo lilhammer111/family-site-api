@@ -5,6 +5,7 @@ pub enum BizKind {
     DataNotFound,
     ClaimsNotFound,
     TokenInvalid,
+    AuthorizationFailed,
 }
 //
 // #[derive(Debug, PartialEq)]
