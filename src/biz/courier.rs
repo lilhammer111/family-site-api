@@ -9,16 +9,20 @@ pub struct Courier<D, O> {
 }
 
 #[derive(Serialize, Debug)]
-pub struct CommunicatorBuilder<D, O> {
+pub struct CourierBuilder<D, O> {
     message: String,
     data: D,
     extra: Option<O>,
 }
 
-#[derive(Serialize, Debug, Default)]
-pub struct Empty;
 
-pub type SadCourier = Courier<String, String>;
+#[derive(Serialize, Debug, Default)]
+pub struct EmptyData;
+
+#[derive(Serialize, Debug, Default)]
+pub struct EmptyExtra;
+
+pub type SadCourier = Courier<EmptyData, EmptyExtra>;
 
 impl SadCourier {
     pub fn brief(message: &str) -> Courier<String, String> {
@@ -34,17 +38,18 @@ impl SadCourier {
     }
 }
 
-pub type HappyCourier<D> = Courier<D, String>;
+
+pub type HappyCourier<D> = Courier<D, EmptyExtra>;
 
 impl<D> HappyCourier<D> {}
 
 impl<D: Default, O: Default> Courier<D, O> {
-    pub fn build() -> CommunicatorBuilder<D, O> {
-        CommunicatorBuilder::default()
+    pub fn build() -> CourierBuilder<D, O> {
+        CourierBuilder::default()
     }
 }
 
-impl<D: Default, O: Default> CommunicatorBuilder<D, O>
+impl<D: Default, O: Default> CourierBuilder<D, O>
 {
     pub fn default() -> Self {
         Self {
@@ -86,7 +91,7 @@ impl<D: Default, O: Default> CommunicatorBuilder<D, O>
 
 mod tests {
     #[test]
-    fn new_communicator() {
+    fn new_courier() {
         use crate::biz::courier::Courier;
 
         struct TestData<'a> {
@@ -94,7 +99,7 @@ mod tests {
             age: u8,
         }
 
-        let comm = Courier::build()
+        let courier = Courier::build()
             .message("Bad request")
             .data(
                 TestData {
@@ -104,8 +109,8 @@ mod tests {
             )
             .done();
 
-        assert_eq!(comm.message, "Bad request");
-        assert_eq!(comm.data.age, "Demon");
-        assert_eq!(comm.data.name, 18);
+        assert_eq!(courier.message, "Bad request");
+        assert_eq!(courier.data.age, "Demon");
+        assert_eq!(courier.data.name, 18);
     }
 }

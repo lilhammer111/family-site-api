@@ -101,55 +101,33 @@ async fn login(app_state: web::Data<AppState>, body: web::Json<ReqBodyForAuth>, 
 
 #[post("/register")]
 async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqBodyForAuth>) -> Result<HttpResponse, Error> {
-    let req = account_json.into_inner();
+    let body = account_json.into_inner();
     let client = get_pg(&app_state).await?;
 
-    match select(&client, &req.username).await {
-        Ok(_) => {
-            Ok(HttpResponse::Conflict().json(
+    let queried_account = select(&client, &body.username)
+        .await?;
+
+    if queried_account.is_empty() {
+        let account_record = add_account(&client, &body.username, &body.password).await?;
+
+        let expires = Local::now().add(TimeDelta::hours(TOKEN_SPAN)).timestamp();
+
+        let token = generate_token(account_record.id, app_state.jwt_secret.as_bytes(), expires)?;
+
+        let cookie = generate_cookie(&token, expires)?;
+
+        Ok(
+            HttpResponse::Created()
+                .cookie(cookie)
+                .json(
+                    Courier::brief("Registration succeed")
+                )
+        )
+    } else {
+        Ok(
+            HttpResponse::Conflict().json(
                 Courier::brief("Username exists")
-            ))
-        }
-        Err(err) => {
-            debug!("error: {:#?}", err);
-
-            match err.biz_kind() {
-                Some(inner_err) => {
-                    match inner_err {
-                        BizKind::DataNotFound => {
-                            let account_record = add_account(&client, &req.username, &req.password).await?;
-
-                            let expires = Local::now().add(TimeDelta::hours(TOKEN_SPAN)).timestamp();
-
-                            let token = generate_token(account_record.id, app_state.jwt_secret.as_bytes(), expires)?;
-
-                            let cookie = generate_cookie(&token, expires)?;
-
-                            Ok(
-                                HttpResponse::Created()
-                                    .cookie(cookie)
-                                    .json(
-                                        Courier::brief("Registration succeed")
-                                    )
-                            )
-                        }
-                        _ => {
-                            Ok(
-                                HttpResponse::InternalServerError().json(
-                                    Courier::sorry()
-                                )
-                            )
-                        }
-                    }
-                }
-                None => {
-                    Ok(
-                        HttpResponse::InternalServerError().json(
-                            Courier::sorry()
-                        )
-                    )
-                }
-            }
-        }
+            )
+        )
     }
 }
