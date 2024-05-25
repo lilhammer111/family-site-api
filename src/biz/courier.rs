@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use serde::Serialize;
 
 #[derive(Serialize, Debug)]
-pub struct Communicator<D, O> {
+pub struct Courier<D, O> {
     message: String,
     data: D,
     extra: Option<O>,
@@ -18,27 +18,27 @@ pub struct CommunicatorBuilder<D, O> {
 #[derive(Serialize, Debug, Default)]
 pub struct Empty;
 
-pub type SadCommunicator = Communicator<String, String>;
+pub type SadCourier = Courier<String, String>;
 
-impl SadCommunicator {
-    pub fn brief(message: &str) -> Communicator<String, String> {
-        Communicator::build()
+impl SadCourier {
+    pub fn brief(message: &str) -> Courier<String, String> {
+        Courier::build()
             .message(message)
             .done()
     }
 
-    pub fn sorry() -> Communicator<String, String> {
-        Communicator::build()
+    pub fn sorry() -> Courier<String, String> {
+        Courier::build()
             .message("Internal server error due to an unknown reason")
             .done()
     }
 }
 
-pub type JoyfulCommunicator<D> = Communicator<D, String>;
+pub type HappyCourier<D> = Courier<D, String>;
 
-impl<D> JoyfulCommunicator<D> {}
+impl<D> HappyCourier<D> {}
 
-impl<D: Default, O: Default> Communicator<D, O> {
+impl<D: Default, O: Default> Courier<D, O> {
     pub fn build() -> CommunicatorBuilder<D, O> {
         CommunicatorBuilder::default()
     }
@@ -75,8 +75,8 @@ impl<D: Default, O: Default> CommunicatorBuilder<D, O>
         }
     }
 
-    pub fn done(self) -> Communicator<D, O> {
-        Communicator {
+    pub fn done(self) -> Courier<D, O> {
+        Courier {
             message: self.message,
             data: self.data,
             extra: self.extra,
@@ -87,14 +87,14 @@ impl<D: Default, O: Default> CommunicatorBuilder<D, O>
 mod tests {
     #[test]
     fn new_communicator() {
-        use crate::biz::base_comm::Communicator;
+        use crate::biz::courier::Courier;
 
         struct TestData<'a> {
             name: &'a str,
             age: u8,
         }
 
-        let comm = Communicator::build()
+        let comm = Courier::build()
             .message("Bad request")
             .data(
                 TestData {

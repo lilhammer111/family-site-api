@@ -3,6 +3,6 @@ pub mod file;
 pub mod user;
 pub mod wish;
 pub mod journal;
-pub mod base_comm;
+pub mod courier;
 mod internal;
 

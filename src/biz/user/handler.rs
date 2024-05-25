@@ -1,7 +1,7 @@
 use actix_web::{Error, get, HttpRequest, HttpResponse, post, web};
 use crate::AppState;
 use log::debug;
-use crate::biz::base_comm::{JoyfulCommunicator};
+use crate::biz::courier::{HappyCourier};
 use crate::biz::user::communicator::{UserQuery, UserJson, UserResp};
 use crate::biz::user::recorder::{query_account_by_id, select_many, update_account};
 use crate::biz::internal::{extract_user_id, get_pg};
@@ -35,7 +35,7 @@ async fn get_user_info_in_batches(app_state: web::Data<AppState>, QueryString(us
     let resp = user_records.into_iter().map(Into::into).collect::<Vec<UserResp>>();
 
     Ok(HttpResponse::Ok().json(
-        JoyfulCommunicator::<Vec<UserResp>>::build()
+        HappyCourier::<Vec<UserResp>>::build()
             .message("Success to get user information in batches")
             .data(resp)
             .done()

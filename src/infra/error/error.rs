@@ -4,7 +4,7 @@ use actix_web::{HttpResponse, ResponseError};
 use chrono::{NaiveDateTime, Utc};
 use jsonwebtoken::errors::ErrorKind;
 use tokio_postgres::error::SqlState;
-use crate::biz::base_comm::{SadCommunicator};
+use crate::biz::courier::{SadCourier};
 use crate::infra::error::biz::BizKind;
 use crate::infra::error::biz::BizKind::{DataNotFound, TokenInvalid, AuthorizationFailed};
 use crate::infra::error::error::Kind::{BizError, InfraError};
@@ -173,7 +173,7 @@ impl ResponseError for ServiceError {
             // if none, it indicates that the error instance is not type of business error.
             None => {
                 HttpResponse::InternalServerError().json(
-                    SadCommunicator::sorry()
+                    SadCourier::sorry()
                 )
             }
             // otherwise business error
@@ -181,17 +181,17 @@ impl ResponseError for ServiceError {
                 match biz_err_kind {
                     AuthorizationFailed => {
                         HttpResponse::Unauthorized().json(
-                            SadCommunicator::brief("Password or username is incorrect")
+                            SadCourier::brief("Password or username is incorrect")
                         )
                     }
                     DataNotFound => {
                         HttpResponse::NotFound().json(
-                            SadCommunicator::brief("Data is not found")
+                            SadCourier::brief("Data is not found")
                         )
                     }
                     _ => {
                         HttpResponse::InternalServerError().json(
-                            SadCommunicator::sorry()
+                            SadCourier::sorry()
                         )
                     }
                 }

@@ -1,6 +1,6 @@
 use actix_web::{Error, get, HttpRequest, HttpResponse, post, web};
 use crate::AppState;
-use crate::biz::base_comm::{Communicator, JoyfulCommunicator, SadCommunicator};
+use crate::biz::courier::{Courier, HappyCourier, SadCourier};
 use crate::biz::internal::{extract_user_id, get_pg, MAX_PAGE_SIZE, MIN_PAGE_SIZE};
 use crate::biz::wish::communicator::{WishJson, WishQuery, WishResp};
 use crate::biz::wish::recorder;
@@ -16,7 +16,7 @@ pub async fn create_wish(req: HttpRequest, app_state: web::Data<AppState>, body:
     if wish_json.content.is_empty() {
         return Ok(
             HttpResponse::BadRequest().json(
-                JoyfulCommunicator::build()
+                HappyCourier::build()
                     .message("Wish content is empty")
                     .data("")
                     .done()
@@ -33,7 +33,7 @@ pub async fn create_wish(req: HttpRequest, app_state: web::Data<AppState>, body:
     Ok(
         HttpResponse::Created()
             .json(
-                JoyfulCommunicator::<WishResp>::build()
+                HappyCourier::<WishResp>::build()
                     .message("Success to create the wish")
                     .data(
                         wish_record.into()
@@ -51,13 +51,13 @@ pub async fn get_paginated_wish(app_state: web::Data<AppState>, wish_params: web
 
     if wish_params.page_size < MIN_PAGE_SIZE {
         return Ok(HttpResponse::BadRequest().json(
-            SadCommunicator::brief("Page size is too small")
+            SadCourier::brief("Page size is too small")
         ));
     }
 
     if wish_params.page_size > MAX_PAGE_SIZE {
         return Ok(HttpResponse::BadRequest().json(
-            SadCommunicator::brief("Page size is too big")
+            SadCourier::brief("Page size is too big")
         ));
     }
 
@@ -65,7 +65,7 @@ pub async fn get_paginated_wish(app_state: web::Data<AppState>, wish_params: web
 
     if wish_params.page_number > (total_record / wish_params.page_size + 1) {
         return Ok(HttpResponse::BadRequest().json(
-            SadCommunicator::brief("Page number is too big")
+            SadCourier::brief("Page number is too big")
         ));
     }
 
@@ -79,7 +79,7 @@ pub async fn get_paginated_wish(app_state: web::Data<AppState>, wish_params: web
 
     Ok(
         HttpResponse::Ok().json(
-            Communicator::<Vec<WishResp>, i64>::build()
+            Courier::<Vec<WishResp>, i64>::build()
                 .message("Success to get wish data")
                 .data(
                     wish_resp

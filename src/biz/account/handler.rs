@@ -8,7 +8,7 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use log::{debug};
 use crate::AppState;
 use crate::biz::account::communicator::ReqBodyForAuth;
-use crate::biz::base_comm::{Communicator, SadCommunicator};
+use crate::biz::courier::{Courier, SadCourier};
 use crate::biz::internal::get_pg;
 use crate::infra::error::biz::BizKind;
 use crate::infra::error::biz::BizKind::AuthorizationFailed;
@@ -87,7 +87,7 @@ async fn login(app_state: web::Data<AppState>, body: web::Json<ReqBodyForAuth>, 
                     HttpResponse::Ok()
                         .cookie(cookie)
                         .json(
-                            SadCommunicator::brief("login success")
+                            SadCourier::brief("login success")
                         )
                 )
             } else {
@@ -107,7 +107,7 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqBod
     match select(&client, &req.username).await {
         Ok(_) => {
             Ok(HttpResponse::Conflict().json(
-                Communicator::brief("Username exists")
+                Courier::brief("Username exists")
             ))
         }
         Err(err) => {
@@ -129,14 +129,14 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqBod
                                 HttpResponse::Created()
                                     .cookie(cookie)
                                     .json(
-                                        Communicator::brief("Registration succeed")
+                                        Courier::brief("Registration succeed")
                                     )
                             )
                         }
                         _ => {
                             Ok(
                                 HttpResponse::InternalServerError().json(
-                                    Communicator::sorry()
+                                    Courier::sorry()
                                 )
                             )
                         }
@@ -145,7 +145,7 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqBod
                 None => {
                     Ok(
                         HttpResponse::InternalServerError().json(
-                            Communicator::sorry()
+                            Courier::sorry()
                         )
                     )
                 }
