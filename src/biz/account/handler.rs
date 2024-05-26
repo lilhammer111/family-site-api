@@ -10,7 +10,6 @@ use crate::AppState;
 use crate::biz::account::communicator::ReqBodyForAuth;
 use crate::biz::courier::{Courier, SadCourier};
 use crate::biz::internal::get_pg;
-use crate::infra::error::biz::BizKind;
 use crate::infra::error::biz::BizKind::AuthorizationFailed;
 use crate::infra::error::error::ServiceError;
 use crate::infra::error::error::Kind::{BizError, InfraError};

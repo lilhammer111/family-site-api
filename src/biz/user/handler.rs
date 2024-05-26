@@ -1,4 +1,4 @@
-use actix_web::{Error, get, HttpRequest, HttpResponse, post, web};
+use actix_web::{Error, get, HttpRequest, HttpResponse, put, web};
 use crate::AppState;
 use log::debug;
 use crate::biz::courier::{HappyCourier};
@@ -42,7 +42,7 @@ async fn get_user_info_in_batches(app_state: web::Data<AppState>, QueryString(us
     ))
 }
 
-#[post("")]
+#[put("")]
 async fn update_user_info(req: HttpRequest, app_state: web::Data<AppState>, req_body: web::Json<UserJson>) -> Result<HttpResponse, Error> {
     debug!("update user req body: {:?}", req_body);
 
