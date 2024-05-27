@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Debug)]
 pub struct Courier<D, O> {
@@ -51,7 +51,7 @@ impl<D: Default, O: Default> Courier<D, O> {
 
 impl<D: Default, O: Default> CourierBuilder<D, O>
 {
-    pub fn default() -> CourierBuilder<D, O> {
+    pub fn default() -> Self {
         Self {
             message: "".to_string(),
             data: D::default(),
@@ -59,25 +59,19 @@ impl<D: Default, O: Default> CourierBuilder<D, O>
         }
     }
 
-    pub fn message(self, message: &str) -> CourierBuilder<D, O> {
-        Self {
-            message: message.to_string(),
-            ..self
-        }
+    pub fn message(mut self, message: &str) -> Self {
+        self.message = message.to_string();
+        self
     }
 
-    pub fn data(self, data: D) -> CourierBuilder<D, O> {
-        Self {
-            data,
-            ..self
-        }
+    pub fn data(mut self, data: D) -> Self {
+        self.data = data;
+        self
     }
 
-    pub fn extra(self, extra: O) -> CourierBuilder<D, O> {
-        Self {
-            extra: Some(extra),
-            ..self
-        }
+    pub fn extra(mut self, extra: O) -> Self {
+        self.extra = Some(extra);
+        self
     }
 
     pub fn done(self) -> Courier<D, O> {
@@ -87,6 +81,12 @@ impl<D: Default, O: Default> CourierBuilder<D, O>
             extra: self.extra,
         }
     }
+}
+
+#[derive(Serialize, Debug, Deserialize)]
+pub struct PaginateQuery {
+    pub page_number: i64,
+    pub page_size:i64,
 }
 
 mod tests {

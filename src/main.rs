@@ -17,6 +17,7 @@ use tokio_postgres::NoTls;
 use biz::account::handler::{login, register};
 use crate::biz::user::handler::{get_user_info, get_user_info_in_batches, update_user_info};
 use crate::biz::file::handler::save;
+use crate::biz::journal::handler::{create_journal, read_paginated_journal};
 use crate::biz::wish::handler::{create_wish, get_paginated_wish};
 use crate::infra::{
     init::Initializer,
@@ -99,7 +100,9 @@ async fn main() -> io::Result<()> {
             .service(get_paginated_wish);
 
         let journal_scope = web::scope("/journal")
-            .wrap(JwtMiddleware);
+            .wrap(JwtMiddleware)
+            .service(create_journal)
+            .service(read_paginated_journal);
 
         let api_service = web::scope("/api")
             .service(account_scope)

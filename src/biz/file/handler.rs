@@ -1,20 +1,21 @@
-use actix_web::{web, Error, HttpResponse, post, HttpRequest};
+use actix_web::{web, Error, HttpResponse, post};
 use futures::StreamExt;
 use std::io::Write;
 use actix_multipart::Multipart;
-use chrono::Utc;
 use futures_util::TryStreamExt;
 use log::debug;
 use crate::AppState;
 use crate::biz::courier::SadCourier;
-use crate::biz::internal::extract_user_id;
 use crate::infra::error::error::Kind::InfraError;
 use crate::infra::error::error::ServiceError;
 
 /// 上传头像处理函数
 #[post("/image")]
-async fn save(req: HttpRequest, app_state: web::Data<AppState>, mut payload: Multipart) -> Result<HttpResponse, Error> {
-    let user_id = extract_user_id(req)?;
+async fn save(
+    // req: HttpRequest,
+    app_state: web::Data<AppState>,
+    mut payload: Multipart) -> Result<HttpResponse, Error> {
+    // let user_id = extract_user_id(req)?;
 
     while let Ok(Some(mut field)) = payload.try_next().await {
         debug!("field: {:?}", field);

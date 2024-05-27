@@ -7,12 +7,6 @@ pub struct WishJson {
     pub content: String,
 }
 
-#[derive(Serialize, Debug, Deserialize)]
-pub struct WishQuery {
-    pub page_number: i64,
-    pub page_size:i64,
-}
-
 #[derive(Serialize, Debug, Deserialize, Default)]
 pub struct WishResp {
     pub id: i64,

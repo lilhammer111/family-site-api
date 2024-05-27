@@ -8,11 +8,11 @@ use crate::infra::error::biz::BizKind::DataNotFound;
 use crate::infra::error::error::ServiceError;
 use crate::infra::error::error::Kind::BizError;
 
-#[derive(Deserialize, PostgresMapper, Debug, Serialize)]
+#[derive(Deserialize, PostgresMapper, Debug, Serialize, Default)]
 #[pg_mapper(table = "Journal")]
 pub struct JournalRecord {
     pub id: i64,
-    pub title: i64,
+    pub title: String,
     pub content: String,
     pub images: Vec<String>,
     pub created_at: NaiveDateTime,
@@ -23,7 +23,8 @@ pub(crate) async fn insert(pg_client: &PgClient, title: &str, content: &str, ima
     let stmt = r#"
         INSERT INTO
             journal(title, content, images)
-        VALUES ($1, $2, $3)
+        VALUES
+            ($1, $2, $3)
         RETURNING *;
     "#;
 
@@ -45,11 +46,13 @@ pub(crate) async fn select_many(pc: &PgClient, page_number: i64, page_size: i64)
     let stmt = r#"
         SELECT
             id,
-            user_id,
+            title,
             content,
-            created_at
+            images,
+            created_at,
+            updated_at
         FROM
-            wish
+            journal
         ORDER BY
             created_at DESC
         LIMIT
@@ -69,19 +72,19 @@ pub(crate) async fn select_many(pc: &PgClient, page_number: i64, page_size: i64)
                 .done()
         )
     } else {
-        let mut wishes = Vec::new();
+        let mut journal = Vec::new();
 
         for row in rows {
-            let wish_record = JournalRecord::from_row_ref(&row)?;
-            wishes.push(wish_record)
+            let journal_record = JournalRecord::from_row_ref(&row)?;
+            journal.push(journal_record)
         }
 
-        Ok(wishes)
+        Ok(journal)
     };
 }
 
 pub(crate) async fn count(pc: &PgClient) -> Result<i64, ServiceError> {
-    let stmt = r#"SELECT COUNT(*) FROM wish"#;
+    let stmt = r#"SELECT COUNT(*) FROM journal"#;
 
     let count = pc.query_one(stmt, &[])
         .await?

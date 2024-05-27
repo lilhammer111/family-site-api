@@ -1,16 +1,13 @@
-use actix_web::{Error, get, HttpRequest, HttpResponse, post, web};
+use actix_web::{Error, get, HttpResponse, post, web};
 use crate::AppState;
-use crate::biz::courier::{Courier, HappyCourier, SadCourier};
-use crate::biz::internal::{extract_user_id, get_pg, MAX_PAGE_SIZE, MIN_PAGE_SIZE};
-use crate::biz::journal::courier::{JournalJson, WishQuery, WishResp};
-use crate::biz::journal::recorder::JournalRecord;
+use crate::biz::courier::{Courier, HappyCourier, PaginateQuery, SadCourier};
+use crate::biz::internal::{get_pg, MAX_PAGE_SIZE, MIN_PAGE_SIZE};
+use crate::biz::journal::courier::{JournalJson};
 use super::recorder;
 
 #[post("")]
-pub async fn create_journal(req: HttpRequest, app_state: web::Data<AppState>, body: web::Json<JournalJson>) -> Result<HttpResponse, Error> {
+pub async fn create_journal(app_state: web::Data<AppState>, body: web::Json<JournalJson>) -> Result<HttpResponse, Error> {
     let pg_client = get_pg(&app_state).await?;
-
-    let user_id = extract_user_id(req)?;
 
     let journal_body = body.into_inner();
 
@@ -26,13 +23,13 @@ pub async fn create_journal(req: HttpRequest, app_state: web::Data<AppState>, bo
         &pg_client,
         &journal_body.title,
         &journal_body.content,
-        &journal_body.images.iter().map(|image_url| image_url.as_str()).collect(),
+        &journal_body.images.iter().map(|image_url| image_url.as_str()).collect::<Vec<&str>>(),
     ).await?;
 
     Ok(
         HttpResponse::Created()
             .json(
-                HappyCourier::<JournalRecord>::build()
+                HappyCourier::build()
                     .message("Success to create journal")
                     .data(journal_record)
                     .done()
@@ -41,46 +38,46 @@ pub async fn create_journal(req: HttpRequest, app_state: web::Data<AppState>, bo
 }
 
 #[get("/paginated")]
-pub async fn read_paginated_journal(app_state: web::Data<AppState>, wish_params: web::Query<WishQuery>) -> Result<HttpResponse, Error> {
-    let pg_client = get_pg(&app_state).await?;
+pub async fn read_paginated_journal(app_state: web::Data<AppState>, paginate_query: web::Query<PaginateQuery>) -> Result<HttpResponse, Error> {
+    let client = get_pg(&app_state).await?;
 
     // params validation
-    let wish_params = wish_params.into_inner();
+    let paginate = paginate_query.into_inner();
 
-    if wish_params.page_size < MIN_PAGE_SIZE {
+    if paginate.page_size < MIN_PAGE_SIZE {
         return Ok(HttpResponse::BadRequest().json(
             SadCourier::brief("Page size is too small")
         ));
     }
 
-    if wish_params.page_size > MAX_PAGE_SIZE {
+    if paginate.page_size > MAX_PAGE_SIZE {
         return Ok(HttpResponse::BadRequest().json(
             SadCourier::brief("Page size is too big")
         ));
     }
 
-    let total_record = recorder::count(&pg_client).await?;
+    let total_record = recorder::count(&client).await?;
 
-    if wish_params.page_number > (total_record / wish_params.page_size + 1) {
+    if paginate.page_number > (total_record / paginate.page_size + 1) {
         return Ok(HttpResponse::BadRequest().json(
             SadCourier::brief("Page number is too big")
         ));
     }
 
 
-    let wish_records = recorder::select_many(&pg_client, wish_params.page_number, wish_params.page_size)
+    let journal_records = recorder::select_many(
+        &client,
+        paginate.page_number,
+        paginate.page_size,
+    )
         .await?;
-
-    let wish_resp = wish_records.into_iter()
-        .map(WishResp::from)
-        .collect::<Vec<WishResp>>();
 
     Ok(
         HttpResponse::Ok().json(
-            Courier::<Vec<WishResp>, i64>::build()
+            Courier::build()
                 .message("Success to get wish data")
                 .data(
-                    wish_resp
+                    journal_records
                 )
                 .extra(total_record)
                 .done()
