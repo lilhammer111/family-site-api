@@ -2,45 +2,40 @@ use actix_web::{Error, get, HttpRequest, HttpResponse, post, web};
 use crate::AppState;
 use crate::biz::courier::{Courier, HappyCourier, SadCourier};
 use crate::biz::internal::{extract_user_id, get_pg, MAX_PAGE_SIZE, MIN_PAGE_SIZE};
-use crate::biz::wish::communicator::{WishJson, WishQuery, WishResp};
-use crate::biz::wish::recorder;
-
-
-
+use crate::biz::journal::courier::{JournalJson, WishQuery, WishResp};
+use crate::biz::journal::recorder::JournalRecord;
+use super::recorder;
 
 #[post("")]
-pub async fn create_journal(req: HttpRequest, app_state: web::Data<AppState>, body: web::Json<WishJson>) -> Result<HttpResponse, Error> {
+pub async fn create_journal(req: HttpRequest, app_state: web::Data<AppState>, body: web::Json<JournalJson>) -> Result<HttpResponse, Error> {
     let pg_client = get_pg(&app_state).await?;
 
     let user_id = extract_user_id(req)?;
 
-    let wish_json = body.into_inner();
+    let journal_body = body.into_inner();
 
-    if wish_json.content.is_empty() {
+    if journal_body.content.is_empty() || journal_body.title.is_empty() {
         return Ok(
             HttpResponse::BadRequest().json(
-                HappyCourier::build()
-                    .message("Wish content is empty")
-                    .data("")
-                    .done()
+                SadCourier::brief("Journal content or title is empty")
             )
         );
     }
 
-    let wish_record = recorder::insert(
+    let journal_record = recorder::insert(
         &pg_client,
-        user_id,
-        &wish_json.content,
+        &journal_body.title,
+        &journal_body.content,
+        &journal_body.images.iter().map(|image_url| image_url.as_str()).collect(),
     ).await?;
 
     Ok(
         HttpResponse::Created()
             .json(
-                HappyCourier::<WishResp>::build()
-                    .message("Success to create the wish")
-                    .data(
-                        wish_record.into()
-                    )
+                HappyCourier::<JournalRecord>::build()
+                    .message("Success to create journal")
+                    .data(journal_record)
+                    .done()
             )
     )
 }

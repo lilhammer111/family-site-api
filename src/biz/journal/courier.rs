@@ -3,8 +3,10 @@ use serde::{Deserialize, Serialize};
 use crate::biz::wish::recorder::WishRecord;
 
 #[derive(Serialize, Debug, Deserialize)]
-pub struct WishJson {
+pub struct JournalJson {
+    pub title: String,
     pub content: String,
+    pub images: Vec<String>,
 }
 
 #[derive(Serialize, Debug, Deserialize)]

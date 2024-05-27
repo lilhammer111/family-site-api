@@ -9,32 +9,35 @@ use crate::infra::error::error::ServiceError;
 use crate::infra::error::error::Kind::BizError;
 
 #[derive(Deserialize, PostgresMapper, Debug, Serialize)]
-#[pg_mapper(table = "wish")]
-pub struct WishRecord {
+#[pg_mapper(table = "Journal")]
+pub struct JournalRecord {
     pub id: i64,
-    pub user_id: i64,
+    pub title: i64,
     pub content: String,
+    pub images: Vec<String>,
     pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
 }
 
-pub async fn insert(pg_client: &PgClient, user_id: i64, content: &str) -> Result<WishRecord, ServiceError> {
+pub(crate) async fn insert(pg_client: &PgClient, title: &str, content: &str, images: &[&str]) -> Result<JournalRecord, ServiceError> {
     let stmt = r#"
-        INSERT INTO wish(user_id, content)
-        VALUES ($1, $2)
+        INSERT INTO
+            journal(title, content, images)
+        VALUES ($1, $2, $3)
         RETURNING *;
     "#;
 
     let row = pg_client
-        .query_one(stmt, &[&user_id, &content])
+        .query_one(stmt, &[&title, &content, &images])
         .await?;
 
-    let wish = WishRecord::from_row_ref(&row)?;
+    let journal_record = JournalRecord::from_row_ref(&row)?;
 
-    Ok(wish)
+    Ok(journal_record)
 }
 
 
-pub async fn select_many(pc: &PgClient, page_number: i64, page_size: i64) -> Result<Vec<WishRecord>, ServiceError> {
+pub(crate) async fn select_many(pc: &PgClient, page_number: i64, page_size: i64) -> Result<Vec<JournalRecord>, ServiceError> {
     debug!("page number: {}, page size: {}",page_number, page_size);
 
     let offset = page_number * page_size;
@@ -69,7 +72,7 @@ pub async fn select_many(pc: &PgClient, page_number: i64, page_size: i64) -> Res
         let mut wishes = Vec::new();
 
         for row in rows {
-            let wish_record = WishRecord::from_row_ref(&row)?;
+            let wish_record = JournalRecord::from_row_ref(&row)?;
             wishes.push(wish_record)
         }
 
@@ -77,7 +80,7 @@ pub async fn select_many(pc: &PgClient, page_number: i64, page_size: i64) -> Res
     };
 }
 
-pub async fn count(pc: &PgClient) -> Result<i64, ServiceError> {
+pub(crate) async fn count(pc: &PgClient) -> Result<i64, ServiceError> {
     let stmt = r#"SELECT COUNT(*) FROM wish"#;
 
     let count = pc.query_one(stmt, &[])
