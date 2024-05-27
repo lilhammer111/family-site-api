@@ -51,7 +51,7 @@ impl<D: Default, O: Default> Courier<D, O> {
 
 impl<D: Default, O: Default> CourierBuilder<D, O>
 {
-    pub fn default() -> Self {
+    pub fn default() -> CourierBuilder<D, O> {
         Self {
             message: "".to_string(),
             data: D::default(),
@@ -59,21 +59,21 @@ impl<D: Default, O: Default> CourierBuilder<D, O>
         }
     }
 
-    pub fn message(self, message: &str) -> Self {
+    pub fn message(self, message: &str) -> CourierBuilder<D, O> {
         Self {
             message: message.to_string(),
             ..self
         }
     }
 
-    pub fn data(self, data: D) -> Self {
+    pub fn data(self, data: D) -> CourierBuilder<D, O> {
         Self {
             data,
             ..self
         }
     }
 
-    pub fn extra(self, extra: O) -> Self {
+    pub fn extra(self, extra: O) -> CourierBuilder<D, O> {
         Self {
             extra: Some(extra),
             ..self

@@ -7,7 +7,7 @@ use chrono::{Local, TimeDelta};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use log::{debug};
 use crate::AppState;
-use crate::biz::account::communicator::ReqBodyForAuth;
+use crate::biz::account::courier::ReqBodyForAuth;
 use crate::biz::courier::{Courier, SadCourier};
 use crate::biz::internal::get_pg;
 use crate::infra::error::biz::BizKind::AuthorizationFailed;

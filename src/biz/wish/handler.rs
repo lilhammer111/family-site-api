@@ -2,7 +2,7 @@ use actix_web::{Error, get, HttpRequest, HttpResponse, post, web};
 use crate::AppState;
 use crate::biz::courier::{Courier, HappyCourier, SadCourier};
 use crate::biz::internal::{extract_user_id, get_pg, MAX_PAGE_SIZE, MIN_PAGE_SIZE};
-use crate::biz::wish::communicator::{WishJson, WishQuery, WishResp};
+use crate::biz::wish::courier::{WishJson, WishQuery, WishResp};
 use crate::biz::wish::recorder;
 
 #[post("")]

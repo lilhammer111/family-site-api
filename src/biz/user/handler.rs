@@ -2,7 +2,7 @@ use actix_web::{Error, get, HttpRequest, HttpResponse, put, web};
 use crate::AppState;
 use log::debug;
 use crate::biz::courier::{HappyCourier};
-use crate::biz::user::communicator::{UserQuery, UserJson, UserResp};
+use crate::biz::user::courier::{UserQuery, UserJson, UserResp};
 use crate::biz::user::recorder::{query_account_by_id, select_many, update_account};
 use crate::biz::internal::{extract_user_id, get_pg};
 use serde_querystring_actix;
