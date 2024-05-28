@@ -6,7 +6,7 @@ use jsonwebtoken::errors::ErrorKind;
 use tokio_postgres::error::SqlState;
 use crate::biz::courier::{SadCourier};
 use crate::infra::error::biz::BizKind;
-use crate::infra::error::biz::BizKind::{DataNotFound, TokenInvalid, AuthorizationFailed};
+use crate::infra::error::biz::BizKind::{DataNotFound, TokenInvalid, AuthorizationFailed,ValidationFailed};
 use crate::infra::error::error::Kind::{BizError, InfraError};
 
 #[derive(Debug, PartialEq, Default)]
@@ -186,7 +186,12 @@ impl ResponseError for ServiceError {
                     }
                     DataNotFound => {
                         HttpResponse::NotFound().json(
-                            SadCourier::brief("Data is not found")
+                            SadCourier::brief("Data queried is not found")
+                        )
+                    }
+                    ValidationFailed => {
+                        HttpResponse::BadRequest().json(
+                            SadCourier::brief("Form data is invalid")
                         )
                     }
                     _ => {
