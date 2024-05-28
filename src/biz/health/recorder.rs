@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{NaiveDate};
 use deadpool_postgres::Client as PgClient;
 use log::debug;
 use serde::{Deserialize, Serialize};

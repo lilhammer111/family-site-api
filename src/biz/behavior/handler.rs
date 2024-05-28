@@ -1,23 +1,24 @@
 use actix_web::{Error, get, HttpResponse, post, web};
 use crate::AppState;
-use crate::biz::behavior::courier::BehaviorJson;
 use crate::biz::courier::{Courier, HappyCourier, PaginateQuery, SadCourier};
 use crate::biz::internal::{get_pg, MAX_PAGE_SIZE, MIN_PAGE_SIZE};
-use super::recorder;
+use super::{courier, recorder};
 
 #[post("")]
-pub async fn create_behavior(app_state: web::Data<AppState>, body: web::Json<BehaviorJson>) -> Result<HttpResponse, Error> {
+pub async fn create_behavior(
+    app_state: web::Data<AppState>,
+    req_body: web::Json<courier::Behavior>,
+) -> Result<HttpResponse, Error> {
     let pg_client = get_pg(&app_state).await?;
 
-    let behavior_body = body.into_inner();
+    let behavior_parcel = req_body.into_inner();
 
     //validate
+    behavior_parcel.validate()?;
 
     let behavior_record = recorder::insert(
         &pg_client,
-        &behavior_body.title,
-        &behavior_body.content,
-        &behavior_body.images.iter().map(|image_url| image_url.as_str()).collect::<Vec<&str>>(),
+        &behavior_parcel,
     ).await?;
 
     Ok(

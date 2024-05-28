@@ -1,12 +1,14 @@
 CREATE TABLE diet (
-    id          BIGSERIAL PRIMARY KEY,
-    milk        INT NOT NULL,
-    meat        INT NOT NULL,
-    egg         INT NOT NULL,
-    vegetable   INT NOT NULL,
-    fruit       INT NOT NULL,
-    grain      INT NOT NULL,
-    record_date DATE NOT NULL
+    id              BIGSERIAL PRIMARY KEY,
+    milk            INT NOT NULL,
+    meat            INT NOT NULL,
+    egg             INT NOT NULL,
+    vegetable       INT NOT NULL,
+    fruit           INT NOT NULL,
+    grain           INT NOT NULL,
+    record_date     DATE NOT NULL,
+    created_at      TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 )
 
 COMMENT ON COLUMN diet.milk IS 'Unit: milliliters (ml)';

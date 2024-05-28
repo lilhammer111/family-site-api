@@ -1,10 +1,10 @@
-use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{NaiveDate, NaiveTime};
 use deadpool_postgres::Client as PgClient;
 use log::debug;
 use serde::{Deserialize, Serialize};
 use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_pg_mapper_derive::PostgresMapper;
-use crate::biz::behavior::courier::BehaviorJson;
+use crate::biz::behavior::courier::Behavior;
 use crate::infra::error::biz::BizKind::DataNotFound;
 use crate::infra::error::error::ServiceError;
 use crate::infra::error::error::Kind::BizError;
@@ -18,11 +18,11 @@ pub struct BehaviorRecord {
     pub diaper_changes: i32,
     pub naps: i32,
     pub crying_episodes: i32,
-    pub outdoor_time: Duration,
+    pub outdoor_time: i32,
     pub record_date: NaiveDate,
 }
 
-pub(crate) async fn insert(pg_client: &PgClient, behavior_json: &BehaviorJson) -> Result<BehaviorRecord, ServiceError> {
+pub(crate) async fn insert(pg_client: &PgClient, behavior_json: &Behavior) -> Result<BehaviorRecord, ServiceError> {
     let stmt = r#"
         INSERT INTO
             behavior (

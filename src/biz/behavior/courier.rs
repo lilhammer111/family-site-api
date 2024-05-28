@@ -1,23 +1,23 @@
-use chrono::{Duration, NaiveDate, NaiveTime};
+use chrono::{NaiveDate, NaiveTime};
 use serde::{Deserialize, Serialize};
 use crate::infra::error::biz::BizKind::ValidationFailed;
 use crate::infra::error::error::Kind::BizError;
 use crate::infra::error::error::ServiceError;
 
 #[derive(Serialize, Debug, Deserialize)]
-pub struct BehaviorJson {
+pub struct Behavior {
     pub wake_up_time: NaiveTime,
     pub sleep_time: NaiveTime,
     pub diaper_changes: i32,
     pub naps: i32,
     pub crying_episodes: i32,
-    pub outdoor_time: Duration,
+    pub outdoor_time: i32,
     pub record_date: NaiveDate,
 }
 
-impl BehaviorJson {
+impl Behavior {
     pub fn validate(&self) -> Result<(), ServiceError> {
-        if self.diaper_changes <= 0 {
+        if self.diaper_changes < 0 {
             return Err(
                 ServiceError::build()
                     .belong(BizError(ValidationFailed))
@@ -25,7 +25,7 @@ impl BehaviorJson {
                     .done()
             );
         }
-        if self.naps <= 0 {
+        if self.naps < 0 {
             return Err(
                 ServiceError::build()
                     .belong(BizError(ValidationFailed))
@@ -33,7 +33,7 @@ impl BehaviorJson {
                     .done()
             );
         }
-        if self.crying_episodes <= 0 {
+        if self.crying_episodes < 0 {
             return Err(
                 ServiceError::build()
                     .belong(BizError(ValidationFailed))
@@ -41,7 +41,7 @@ impl BehaviorJson {
                     .done()
             );
         }
-        if self.outdoor_time == Duration::new(0, 0) {
+        if self.outdoor_time < 0 {
             return Err(
                 ServiceError::build()
                     .belong(BizError(ValidationFailed))

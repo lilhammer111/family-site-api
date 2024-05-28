@@ -5,6 +5,8 @@ CREATE TABLE behavior (
     diaper_changes  INT NOT NULL,
     naps            INT NOT NULL,
     crying_episodes INT NOT NULL,
-    outdoor_time    INTERVAL NOT NULL,
-    record_date     DATE NOT NULL
+    outdoor_time    INT NOT NULL,
+    record_date     DATE NOT NULL,
+	created_at      TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+	updated_at      TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
