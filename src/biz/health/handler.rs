@@ -6,7 +6,7 @@ use crate::biz::internal::{get_pg, MAX_PAGE_SIZE, MIN_PAGE_SIZE};
 use super::recorder;
 
 #[post("")]
-pub async fn create_health(app_state: web::Data<AppState>, body: web::Json<HealthJson>) -> Result<HttpResponse, Error> {
+pub async fn create_health_record(app_state: web::Data<AppState>, body: web::Json<HealthJson>) -> Result<HttpResponse, Error> {
     let pg_client = get_pg(&app_state).await?;
 
     let health_body = body.into_inner();
@@ -28,7 +28,7 @@ pub async fn create_health(app_state: web::Data<AppState>, body: web::Json<Healt
         health_body.weight,
         health_body.teeth,
         health_body.head_circumference,
-        health_body.measurement_date
+        health_body.record_date
     ).await?;
 
     Ok(
@@ -41,9 +41,31 @@ pub async fn create_health(app_state: web::Data<AppState>, body: web::Json<Healt
             )
     )
 }
+#[get("/all")]
+pub async fn read_all_health_record(app_state: web::Data<AppState>)-> Result<HttpResponse, Error> {
+    let client = get_pg(&app_state).await?;
+
+    let health_records = recorder::select_all(&client).await?;
+
+    let total_record = recorder::count(&client).await?;
+
+    Ok(
+        HttpResponse::Ok().json(
+            Courier::build()
+                .message("Success to get all health data")
+                .data(
+                    health_records
+                )
+                .extra(total_record)
+                .done()
+        )
+    )
+
+}
+
 
 #[get("/paginated")]
-pub async fn read_paginated_health(app_state: web::Data<AppState>, paginate_query: web::Query<PaginateQuery>) -> Result<HttpResponse, Error> {
+pub async fn read_health_record_paginated(app_state: web::Data<AppState>, paginate_query: web::Query<PaginateQuery>) -> Result<HttpResponse, Error> {
     let client = get_pg(&app_state).await?;
 
     // params validation
@@ -80,7 +102,7 @@ pub async fn read_paginated_health(app_state: web::Data<AppState>, paginate_quer
     Ok(
         HttpResponse::Ok().json(
             Courier::build()
-                .message("Success to get wish data")
+                .message("Success to get paginated health data")
                 .data(
                     health_records
                 )

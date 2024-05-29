@@ -15,12 +15,12 @@ use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use tokio_postgres::NoTls;
 
 use biz::account::handler::{login, register};
-use crate::biz::behavior::handler::{create_behavior, read_paginated_behavior};
-use crate::biz::diet::handler::{create_diet, read_paginated_diet};
+use crate::biz::behavior::handler::{create_behavior, read_all_behavior_record, read_paginated_behavior};
+use crate::biz::diet::handler::{create_diet_record, read_all_diet_record, read_paginated_diet_record};
 use crate::biz::user::handler::{get_user_info, get_user_info_in_batches, update_user_info};
 use crate::biz::file::handler::save;
 use crate::biz::journal::handler::{create_journal, read_paginated_journal};
-use crate::biz::health::handler::{create_health, read_paginated_health};
+use crate::biz::health::handler::{create_health_record, read_all_health_record, read_health_record_paginated};
 use crate::biz::wish::handler::{create_wish, get_paginated_wish};
 use crate::infra::{
     init::Initializer,
@@ -109,18 +109,21 @@ async fn main() -> io::Result<()> {
 
         let health_scope = web::scope("/health")
             .wrap(JwtMiddleware)
-            .service(create_health)
-            .service(read_paginated_health);
+            .service(create_health_record)
+            .service(read_health_record_paginated)
+            .service(read_all_health_record);
 
         let diet_scope = web::scope("/diet")
             .wrap(JwtMiddleware)
-            .service(create_diet)
-            .service(read_paginated_diet);
+            .service(create_diet_record)
+            .service(read_paginated_diet_record)
+            .service(read_all_diet_record);
 
         let behavior_scope = web::scope("/behavior")
             .wrap(JwtMiddleware)
             .service(create_behavior)
-            .service(read_paginated_behavior);
+            .service(read_paginated_behavior)
+            .service(read_all_behavior_record);
 
         let api_service = web::scope("/api")
             .service(account_scope)

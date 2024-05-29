@@ -11,7 +11,7 @@ pub struct Behavior {
     pub diaper_changes: i32,
     pub naps: i32,
     pub crying_episodes: i32,
-    pub outdoor_time: i32,
+    pub duration_outdoor: i32,
     pub record_date: NaiveDate,
 }
 
@@ -41,7 +41,7 @@ impl Behavior {
                     .done()
             );
         }
-        if self.outdoor_time < 0 {
+        if self.duration_outdoor < 0 {
             return Err(
                 ServiceError::build()
                     .belong(BizError(ValidationFailed))

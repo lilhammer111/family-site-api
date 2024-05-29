@@ -32,6 +32,26 @@ pub async fn create_behavior(
     )
 }
 
+
+#[get("/all")]
+pub async fn read_all_behavior_record(app_state: web::Data<AppState>) -> Result<HttpResponse, Error> {
+    let client = get_pg(&app_state).await?;
+    let total_record = recorder::count(&client).await?;
+    let diet_records = recorder::select_all(&client).await?;
+
+    Ok(
+        HttpResponse::Ok().json(
+            Courier::build()
+                .message("Success to get all behavior data")
+                .data(
+                    diet_records
+                )
+                .extra(total_record)
+                .done()
+        )
+    )
+}
+
 #[get("/paginated")]
 pub async fn read_paginated_behavior(app_state: web::Data<AppState>, paginate_query: web::Query<PaginateQuery>) -> Result<HttpResponse, Error> {
     let client = get_pg(&app_state).await?;

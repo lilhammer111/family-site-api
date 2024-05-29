@@ -6,18 +6,18 @@ use crate::infra::error::error::ServiceError;
 
 #[derive(Serialize, Debug, Deserialize)]
 pub struct DietJson {
-    pub milk: i64,
-    pub meat: i64,
-    pub egg: i64,
-    pub vegetable: i64,
-    pub fruit: i64,
-    pub grain: i64,
+    pub milk: i32,
+    pub meat: i32,
+    pub egg: i32,
+    pub vegetable: i32,
+    pub fruit: i32,
+    pub grain: i32,
     pub record_date: NaiveDate,
 }
 
 impl DietJson {
     pub fn validate(&self) -> Result<(), ServiceError> {
-        if self.milk <= 0 {
+        if self.milk < 0 {
             return Err(
                 ServiceError::build()
                     .belong(BizError(ValidationFailed))
@@ -25,7 +25,7 @@ impl DietJson {
                     .done()
             );
         }
-        if self.meat <= 0 {
+        if self.meat < 0 {
             return Err(
                 ServiceError::build()
                     .belong(BizError(ValidationFailed))
@@ -33,7 +33,7 @@ impl DietJson {
                     .done()
             );
         }
-        if self.egg <= 0 {
+        if self.egg < 0 {
             return Err(
                 ServiceError::build()
                     .belong(BizError(ValidationFailed))
@@ -41,7 +41,7 @@ impl DietJson {
                     .done()
             );
         }
-        if self.vegetable <= 0 {
+        if self.vegetable < 0 {
             return Err(
                 ServiceError::build()
                     .belong(BizError(ValidationFailed))
@@ -49,7 +49,7 @@ impl DietJson {
                     .done()
             );
         }
-        if self.fruit <= 0 {
+        if self.fruit < 0 {
             return Err(
                 ServiceError::build()
                     .belong(BizError(ValidationFailed))
@@ -57,7 +57,7 @@ impl DietJson {
                     .done()
             );
         }
-        if self.grain <= 0 {
+        if self.grain < 0 {
             return Err(
                 ServiceError::build()
                     .belong(BizError(ValidationFailed))

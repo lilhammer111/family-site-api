@@ -6,7 +6,7 @@ use crate::biz::internal::{get_pg, MAX_PAGE_SIZE, MIN_PAGE_SIZE};
 use super::recorder;
 
 #[post("")]
-pub async fn create_diet(app_state: web::Data<AppState>, body: web::Json<DietJson>) -> Result<HttpResponse, Error> {
+pub async fn create_diet_record(app_state: web::Data<AppState>, body: web::Json<DietJson>) -> Result<HttpResponse, Error> {
     let pg_client = get_pg(&app_state).await?;
 
     let diet_body = body.into_inner();
@@ -16,7 +16,7 @@ pub async fn create_diet(app_state: web::Data<AppState>, body: web::Json<DietJso
 
     let diet_record = recorder::insert(
         &pg_client,
-        &diet_body
+        &diet_body,
     ).await?;
 
     Ok(
@@ -30,8 +30,27 @@ pub async fn create_diet(app_state: web::Data<AppState>, body: web::Json<DietJso
     )
 }
 
+#[get("/all")]
+pub async fn read_all_diet_record(app_state: web::Data<AppState>) -> Result<HttpResponse, Error> {
+    let client = get_pg(&app_state).await?;
+    let total_record = recorder::count(&client).await?;
+    let diet_records = recorder::select_all(&client).await?;
+
+    Ok(
+        HttpResponse::Ok().json(
+            Courier::build()
+                .message("Success to get all diet data")
+                .data(
+                    diet_records
+                )
+                .extra(total_record)
+                .done()
+        )
+    )
+}
+
 #[get("/paginated")]
-pub async fn read_paginated_diet(app_state: web::Data<AppState>, paginate_query: web::Query<PaginateQuery>) -> Result<HttpResponse, Error> {
+pub async fn read_paginated_diet_record(app_state: web::Data<AppState>, paginate_query: web::Query<PaginateQuery>) -> Result<HttpResponse, Error> {
     let client = get_pg(&app_state).await?;
 
     // params validation
@@ -68,7 +87,7 @@ pub async fn read_paginated_diet(app_state: web::Data<AppState>, paginate_query:
     Ok(
         HttpResponse::Ok().json(
             Courier::build()
-                .message("Success to get wish data")
+                .message("Success to get paginated diet data")
                 .data(
                     diet_records
                 )

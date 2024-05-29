@@ -4,6 +4,7 @@ use log::debug;
 use serde::{Deserialize, Serialize};
 use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_pg_mapper_derive::PostgresMapper;
+use tokio_postgres::Client;
 use crate::biz::behavior::courier::Behavior;
 use crate::infra::error::biz::BizKind::DataNotFound;
 use crate::infra::error::error::ServiceError;
@@ -18,7 +19,7 @@ pub struct BehaviorRecord {
     pub diaper_changes: i32,
     pub naps: i32,
     pub crying_episodes: i32,
-    pub outdoor_time: i32,
+    pub duration_outdoor: i32,
     pub record_date: NaiveDate,
 }
 
@@ -31,7 +32,7 @@ pub(crate) async fn insert(pg_client: &PgClient, behavior_json: &Behavior) -> Re
                diaper_changes,
                naps,
                crying_episodes,
-               outdoor_time,
+               duration_outdoor,
                record_date
             )
         VALUES
@@ -48,7 +49,7 @@ pub(crate) async fn insert(pg_client: &PgClient, behavior_json: &Behavior) -> Re
                 &behavior_json.diaper_changes,
                 &behavior_json.naps,
                 &behavior_json.crying_episodes,
-                &behavior_json.outdoor_time,
+                &behavior_json.duration_outdoor,
                 &behavior_json.record_date,
             ],
         )
@@ -57,6 +58,41 @@ pub(crate) async fn insert(pg_client: &PgClient, behavior_json: &Behavior) -> Re
     let behavior_record = BehaviorRecord::from_row_ref(&row)?;
 
     Ok(behavior_record)
+}
+
+
+pub async fn select_all(client: &Client) -> Result<Vec<BehaviorRecord>, ServiceError> {
+    let stmt = r#"
+        SELECT
+            *
+        FROM
+            behavior
+        ORDER BY
+            record_date DESC
+    "#;
+
+
+
+    let rows = client
+        .query(stmt, &[])
+        .await?;
+
+    return if rows.is_empty() {
+        Err(
+            ServiceError::build()
+                .belong(BizError(DataNotFound))
+                .done()
+        )
+    } else {
+        let mut behavior_records = Vec::new();
+
+        for row in rows {
+            let behavior_record = BehaviorRecord::from_row_ref(&row)?;
+            behavior_records.push(behavior_record)
+        }
+
+        Ok(behavior_records)
+    };
 }
 
 

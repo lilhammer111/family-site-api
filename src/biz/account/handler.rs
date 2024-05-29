@@ -8,7 +8,7 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use log::{debug};
 use crate::AppState;
 use crate::biz::account::courier::ReqBodyForAuth;
-use crate::biz::courier::{Courier, SadCourier};
+use crate::biz::courier::{SadCourier};
 use crate::biz::internal::get_pg;
 use crate::infra::error::biz::BizKind::AuthorizationFailed;
 use crate::infra::error::error::ServiceError;
@@ -86,7 +86,7 @@ async fn login(app_state: web::Data<AppState>, body: web::Json<ReqBodyForAuth>, 
                     HttpResponse::Ok()
                         .cookie(cookie)
                         .json(
-                            SadCourier::brief("login success")
+                            SadCourier::brief("Login success")
                         )
                 )
             } else {
@@ -119,13 +119,13 @@ async fn register(app_state: web::Data<AppState>, account_json: web::Json<ReqBod
             HttpResponse::Created()
                 .cookie(cookie)
                 .json(
-                    Courier::brief("Registration succeed")
+                    SadCourier::brief("Registration success")
                 )
         )
     } else {
         Ok(
             HttpResponse::Conflict().json(
-                Courier::brief("Username exists")
+                SadCourier::brief("Username exists")
             )
         )
     }

@@ -16,4 +16,4 @@ COMMENT ON COLUMN diet.meat IS 'Unit: grams (g)';
 COMMENT ON COLUMN diet.egg IS 'Unit: units';
 COMMENT ON COLUMN diet.vegetable IS 'Unit: grams (g)';
 COMMENT ON COLUMN diet.fruit IS 'Unit: grams (g)';
-COMMENT ON COLUMN diet.grains IS 'Unit: grams (g)';
+COMMENT ON COLUMN diet.grain IS 'Unit: grams (g)';

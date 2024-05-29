@@ -4,6 +4,7 @@ use log::debug;
 use serde::{Deserialize, Serialize};
 use tokio_pg_mapper::FromTokioPostgresRow;
 use tokio_pg_mapper_derive::PostgresMapper;
+use tokio_postgres::Client;
 use crate::biz::diet::courier::DietJson;
 use crate::infra::error::biz::BizKind::DataNotFound;
 use crate::infra::error::error::ServiceError;
@@ -13,12 +14,12 @@ use crate::infra::error::error::Kind::BizError;
 #[pg_mapper(table = "Diet")]
 pub struct DietRecord {
     pub id: i64,
-    pub milk: i64,
-    pub meat: i64,
-    pub egg: i64,
-    pub vegetable: i64,
-    pub fruit: i64,
-    pub grain: i64,
+    pub milk: i32,
+    pub meat: i32,
+    pub egg: i32,
+    pub vegetable: i32,
+    pub fruit: i32,
+    pub grain: i32,
     pub record_date: NaiveDate,
 }
 
@@ -33,10 +34,10 @@ pub(crate) async fn insert(pg_client: &PgClient, diet_body: &DietJson) -> Result
                 vegetable,
                 fruit,
                 grain,
-                record_date,
+                record_date
             )
         VALUES
-            ($1, $2, $3, $4, $5)
+            ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *;
     "#;
 
@@ -60,6 +61,39 @@ pub(crate) async fn insert(pg_client: &PgClient, diet_body: &DietJson) -> Result
     Ok(diet_record)
 }
 
+pub async fn select_all(client: &Client) -> Result<Vec<DietRecord>, ServiceError> {
+    let stmt = r#"
+        SELECT
+            *
+        FROM
+            diet
+        ORDER BY
+            record_date DESC
+    "#;
+
+
+
+    let rows = client
+        .query(stmt, &[])
+        .await?;
+
+    return if rows.is_empty() {
+        Err(
+            ServiceError::build()
+                .belong(BizError(DataNotFound))
+                .done()
+        )
+    } else {
+        let mut diet_records = Vec::new();
+
+        for row in rows {
+            let diet_record = DietRecord::from_row_ref(&row)?;
+            diet_records.push(diet_record)
+        }
+
+        Ok(diet_records)
+    };
+}
 
 pub(crate) async fn select_many(pc: &PgClient, page_number: i64, page_size: i64) -> Result<Vec<DietRecord>, ServiceError> {
     debug!("page number: {}, page size: {}",page_number, page_size);
