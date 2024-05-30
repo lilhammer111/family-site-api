@@ -3,8 +3,8 @@ use actix_web::{HttpResponse, post, Error, web};
 use log::debug;
 use serde::{Deserialize, Serialize};
 use crate::AppState;
+use crate::biz::courier::SadCourier;
 use crate::infra::error::error::ServiceError;
-
 
 const KIMI_API_URL: &str = "https://api.moonshot.cn/v1/chat/completions";
 
@@ -19,6 +19,7 @@ struct AiReq {
     presence_penalty: Option<f32>,
     frequency_penalty: Option<f32>,
     stop: Option<Vec<String>>,
+    stream: Option<bool>,
 }
 
 #[post("")]
@@ -28,22 +29,24 @@ pub async fn get_ai_response(app_state: web::Data<AppState>, req_json: web::Json
 
     let client = reqwest::Client::new();
 
-    let ai_resp = client.post(KIMI_API_URL)
+    let kimi_resp = client.post(KIMI_API_URL)
         .header(
             "Authorization",
             format!("Bearer {}", app_state.kimi_secret),
         )
         .json(&req)
-        .send().await
-        .map_err(|e|Into::<ServiceError>::into(e))?
-        .text().await
-        .map_err(|e|Into::<ServiceError>::into(e))?;
+        .send()
+        .await
+        .map_err(|e| Into::<ServiceError>::into(e))?;
 
-    debug!("{:?}", ai_resp);
-
-    Ok(
-        HttpResponse::Ok()
-            .content_type("application/json")
-            .body(ai_resp)
-    )
+    if kimi_resp.status().is_success() {
+        let stream = kimi_resp.bytes_stream();
+        Ok(HttpResponse::Ok().streaming(stream))
+    } else {
+        Ok(
+            HttpResponse::InternalServerError().json(
+                SadCourier::brief("Internal server error due to kimi chat api")
+            )
+        )
+    }
 }

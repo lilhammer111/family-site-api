@@ -1,5 +1,5 @@
 [package]
-name = "ham-fam-api"
+name = "hammer-server"
 version = "0.1.0"
 edition = "2021"
 
@@ -29,4 +29,5 @@ async-trait = "0.1.80"
 base64 = "0.22.1"
 openssl = { version = "0.10.64", features = ["vendored"] }
 serde-querystring-actix = "0.2.0"
-reqwest = { version = "0.12.4", features = ["json"] }
+reqwest = { version = "0.12.4", features = ["json", "stream"] }
+serde_json = "1.0.116"
