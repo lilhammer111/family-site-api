@@ -263,3 +263,13 @@ impl From<jsonwebtoken::errors::Error> for ServiceError {
         }
     }
 }
+
+impl From<reqwest::Error> for ServiceError {
+    fn from(err: reqwest::Error) -> Self {
+        ServiceError::build()
+            .belong(InfraError)
+            .because(Box::new(err))
+            .message("Failed to send request by reqwest")
+            .done()
+    }
+}

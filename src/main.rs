@@ -15,6 +15,7 @@ use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use tokio_postgres::NoTls;
 
 use biz::account::handler::{login, register};
+use crate::biz::ai::handler::get_ai_response;
 use crate::biz::behavior::handler::{create_behavior, read_all_behavior_record, read_paginated_behavior};
 use crate::biz::diet::handler::{create_diet_record, read_all_diet_record, read_paginated_diet_record};
 use crate::biz::user::handler::{get_user_info, get_user_info_in_batches, update_user_info};
@@ -33,6 +34,7 @@ struct AppState {
     jwt_secret: String,
     pool: Pool,
     path_to_static_dir: String,
+    kimi_secret: String
 }
 
 
@@ -54,6 +56,7 @@ async fn main() -> io::Result<()> {
         jwt_secret: settings.jwt_secret.clone(),
         pool: pool.clone(),
         path_to_static_dir: settings.path_to_static_dir.clone(),
+        kimi_secret: settings.kimi_secret.clone()
     };
 
     let server = HttpServer::new(move || {
@@ -125,6 +128,10 @@ async fn main() -> io::Result<()> {
             .service(read_paginated_behavior)
             .service(read_all_behavior_record);
 
+        let ai_scope = web::scope("/ai")
+            .wrap(JwtMiddleware)
+            .service(get_ai_response);
+
         let api_service = web::scope("/api")
             .service(account_scope)
             .service(user_scope)
@@ -133,7 +140,8 @@ async fn main() -> io::Result<()> {
             .service(journal_scope)
             .service(health_scope)
             .service(diet_scope)
-            .service(behavior_scope);
+            .service(behavior_scope)
+            .service(ai_scope);
 
         let static_file_service = web::scope("/static")
             .service(

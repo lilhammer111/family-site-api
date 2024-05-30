@@ -11,6 +11,7 @@ pub struct Settings {
     pub log: LogConfig,
     pub path_to_cert_key: String,
     pub path_to_cert_file: String,
+    pub kimi_secret: String
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]

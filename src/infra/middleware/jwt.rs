@@ -17,7 +17,6 @@ pub struct Claims {
 
 pub const JWT_AUTH_KEY: &str = "t";
 
-
 pub struct JwtMiddleware;
 
 impl<S, B> Transform<S, ServiceRequest> for JwtMiddleware

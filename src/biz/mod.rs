@@ -8,4 +8,5 @@ pub mod journal;
 pub mod health;
 pub mod behavior;
 pub mod diet;
+pub mod ai;
 
