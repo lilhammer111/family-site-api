@@ -9,4 +9,6 @@ pub mod health;
 pub mod behavior;
 pub mod diet;
 pub mod ai;
+pub mod article;
+pub mod article_category;
 
