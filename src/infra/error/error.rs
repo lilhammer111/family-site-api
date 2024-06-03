@@ -1,12 +1,14 @@
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
+use actix_multipart::MultipartError;
 use actix_web::{HttpResponse, ResponseError};
+use actix_web::error::BlockingError;
 use chrono::{NaiveDateTime, Utc};
 use jsonwebtoken::errors::ErrorKind;
 use tokio_postgres::error::SqlState;
 use crate::biz::courier::{SadCourier};
 use crate::infra::error::biz::BizKind;
-use crate::infra::error::biz::BizKind::{DataNotFound, TokenInvalid, AuthorizationFailed,ValidationFailed};
+use crate::infra::error::biz::BizKind::{DataNotFound, TokenInvalid, AuthorizationFailed, ValidationFailed};
 use crate::infra::error::error::Kind::{BizError, InfraError};
 
 #[derive(Debug, PartialEq, Default)]
@@ -270,6 +272,36 @@ impl From<reqwest::Error> for ServiceError {
             .belong(InfraError)
             .because(Box::new(err))
             .message("Failed to send request by reqwest")
+            .done()
+    }
+}
+
+impl From<std::io::Error> for ServiceError {
+    fn from(err: std::io::Error) -> Self {
+        ServiceError::build()
+            .belong(InfraError)
+            .because(Box::new(err))
+            .message("Failed to io read or write")
+            .done()
+    }
+}
+
+impl From<BlockingError> for ServiceError {
+    fn from(err: BlockingError) -> Self {
+        ServiceError::build()
+            .belong(InfraError)
+            .because(Box::new(err))
+            .message("Blocking operation error")
+            .done()
+    }
+}
+
+impl From<MultipartError> for ServiceError {
+    fn from(err: MultipartError) -> Self {
+        ServiceError::build()
+            .belong(InfraError)
+            .because(Box::new(err))
+            .message("Multipart Error")
             .done()
     }
 }

@@ -1,14 +1,17 @@
 CREATE TABLE article (
     id              BIGSERIAL PRIMARY KEY,
-    cover_url       TEXT NOT NULL,
+    kind            VARCHAR(255) NOT NULL,
+    cover_url       TEXT,
     title           VARCHAR(255) NOT NULL,
     author_id       BIGINT NOT NULL,
-    category_id     INT NOT NULL,
+    category_id     INT,
     summary         TEXT,
-    text            TEXT NOT NULL,
+    text            TEXT,
+    text_url        TEXT,
     created_at      TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
 
 CREATE TABLE article_category (
     id          SERIAL PRIMARY KEY,

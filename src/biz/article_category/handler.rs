@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use actix_web::{HttpResponse, Error, web, get};
 use crate::AppState;
 use crate::biz::article_category::recorder::{select_all_category, select_distinct_level};

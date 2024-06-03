@@ -11,20 +11,42 @@ use crate::infra::error::error::ServiceError;
 
 /// 上传头像处理函数
 #[post("/image")]
-async fn save(
-    // req: HttpRequest,
+pub async fn save_image(
     app_state: web::Data<AppState>,
-    mut payload: Multipart) -> Result<HttpResponse, Error> {
-    // let user_id = extract_user_id(req)?;
+    payload: Multipart) -> Result<HttpResponse, Error> {
+    handle_file_upload(payload, &app_state.image_static_dir, "image").await?;
 
+    Ok(HttpResponse::Ok().json(
+        SadCourier::brief("Success to upload image")
+    ))
+}
+
+#[post("/document")]
+pub async fn save_document(
+    app_state: web::Data<AppState>,
+    payload: Multipart) -> Result<HttpResponse, Error> {
+    handle_file_upload(payload, &app_state.document_static_dir, "document").await?;
+
+    Ok(HttpResponse::Ok().json(
+        SadCourier::brief("Success to upload document")
+    ))
+}
+
+
+/// 通用文件上传处理函数
+async fn handle_file_upload(
+    mut payload: Multipart,
+    upload_dir: &str,
+    field_name: &str,
+) -> Result<(), ServiceError> {
     while let Ok(Some(mut field)) = payload.try_next().await {
         debug!("field: {:?}", field);
         debug!("field name: {:?}", field.name());
-        if field.name() == "image" {
+        if field.name() == field_name {
             let content_disposition = field.content_disposition();
             let filename = content_disposition
                 .get_filename()
-                .ok_or(
+                .ok_or_else(||
                     ServiceError::build()
                         .belong(InfraError)
                         .message("Failed to get file name from header of content disposition")
@@ -32,10 +54,9 @@ async fn save(
                 )?;
 
             // let now = Utc::now().timestamp();
-            //
             // let unique_filename = format!("{}_{}_{}", user_id, now, sanitize_filename::sanitize(filename));
 
-            let filepath = format!("{}/{}", app_state.path_to_static_dir, sanitize_filename::sanitize(filename));
+            let filepath = format!("{}/{}", upload_dir, sanitize_filename::sanitize(filename));
 
             // 创建文件并写入数据
             let mut f = web::block(|| std::fs::File::create(filepath)).await??;
@@ -45,9 +66,5 @@ async fn save(
             }
         }
     }
-
-    Ok(HttpResponse::Ok().json(
-        SadCourier::brief("Success to upload image")
-    ))
+    Ok(())
 }
-

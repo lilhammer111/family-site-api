@@ -16,11 +16,12 @@ use tokio_postgres::NoTls;
 
 use biz::account::handler::{login, register};
 use crate::biz::ai::handler::get_ai_response;
+use crate::biz::article::handler::{create_article, read_owned_article};
 use crate::biz::article_category::handler::read_all_category;
 use crate::biz::behavior::handler::{create_behavior, read_all_behavior_record, read_paginated_behavior};
 use crate::biz::diet::handler::{create_diet_record, read_all_diet_record, read_paginated_diet_record};
 use crate::biz::user::handler::{get_user_info, get_user_info_in_batches, update_user_info};
-use crate::biz::file::handler::save;
+use crate::biz::file::handler::{save_document, save_image};
 use crate::biz::journal::handler::{create_journal, read_paginated_journal};
 use crate::biz::health::handler::{create_health_record, read_all_health_record, read_health_record_paginated};
 use crate::biz::wish::handler::{create_wish, get_paginated_wish};
@@ -34,8 +35,9 @@ use crate::infra::middleware::jwt::JwtMiddleware;
 struct AppState {
     jwt_secret: String,
     pool: Pool,
-    path_to_static_dir: String,
-    kimi_secret: String
+    image_static_dir: String,
+    document_static_dir: String,
+    kimi_secret: String,
 }
 
 
@@ -56,8 +58,9 @@ async fn main() -> io::Result<()> {
     let app_data = AppState {
         jwt_secret: settings.jwt_secret.clone(),
         pool: pool.clone(),
-        path_to_static_dir: settings.path_to_static_dir.clone(),
-        kimi_secret: settings.kimi_secret.clone()
+        image_static_dir: settings.path_to_image_static_dir.clone(),
+        document_static_dir: settings.path_to_document_static_dir.clone(),
+        kimi_secret: settings.kimi_secret.clone(),
     };
 
     let server = HttpServer::new(move || {
@@ -99,7 +102,8 @@ async fn main() -> io::Result<()> {
 
         let file_scope = web::scope("/file")
             .wrap(JwtMiddleware)
-            .service(save);
+            .service(save_image)
+            .service(save_document);
 
         let wish_scope = web::scope("/wish")
             .wrap(JwtMiddleware)
@@ -135,6 +139,8 @@ async fn main() -> io::Result<()> {
 
         let article_scope = web::scope("/article")
             .wrap(JwtMiddleware)
+            .service(create_article)
+            .service(read_owned_article)
             .service(
                 web::scope("/category")
                     .service(read_all_category)
@@ -154,7 +160,13 @@ async fn main() -> io::Result<()> {
 
         let static_file_service = web::scope("/static")
             .service(
-                actix_files::Files::new("/file", &settings.path_to_static_dir)
+                actix_files::Files::new("/image", &settings.path_to_image_static_dir)
+                    .show_files_listing()
+                    .use_etag(true)
+                    .use_last_modified(true)
+            )
+            .service(
+                actix_files::Files::new("/document", &settings.path_to_document_static_dir)
                     .show_files_listing()
                     .use_etag(true)
                     .use_last_modified(true)
