@@ -20,6 +20,7 @@ use crate::biz::article::handler::{create_article, read_owned_article};
 use crate::biz::article_category::handler::read_all_category;
 use crate::biz::behavior::handler::{create_behavior, read_all_behavior_record, read_paginated_behavior};
 use crate::biz::diet::handler::{create_diet_record, read_all_diet_record, read_paginated_diet_record};
+use crate::biz::draft::handler::{create_draft, read_draft_owned};
 use crate::biz::user::handler::{get_user_info, get_user_info_in_batches, update_user_info};
 use crate::biz::file::handler::{save_document, save_image};
 use crate::biz::journal::handler::{create_journal, read_paginated_journal};
@@ -146,6 +147,11 @@ async fn main() -> io::Result<()> {
                     .service(read_all_category)
             );
 
+        let draft_scope = web::scope("/draft")
+            .wrap(JwtMiddleware)
+            .service(create_draft)
+            .service(read_draft_owned);
+
         let api_service = web::scope("/api")
             .service(account_scope)
             .service(user_scope)
@@ -156,7 +162,8 @@ async fn main() -> io::Result<()> {
             .service(diet_scope)
             .service(behavior_scope)
             .service(ai_scope)
-            .service(article_scope);
+            .service(article_scope)
+            .service(draft_scope);
 
         let static_file_service = web::scope("/static")
             .service(

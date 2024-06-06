@@ -1,10 +1,12 @@
 CREATE TABLE article (
     id              BIGSERIAL PRIMARY KEY,
     kind            VARCHAR(255) NOT NULL,
+    tags            VARCHAR(255)[],
+    is_trending     BOOLEAN DEFAULT FALSE NOT NULL,
+    is_insight      BOOLEAN DEFAULT FALSE NOT NULL,
     cover_url       TEXT,
     title           VARCHAR(255) NOT NULL,
     author_id       BIGINT NOT NULL,
-    category_id     INT,
     summary         TEXT,
     text            TEXT,
     text_url        TEXT,
