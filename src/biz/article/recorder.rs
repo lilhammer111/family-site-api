@@ -14,33 +14,39 @@ use crate::infra::error::error::ServiceError;
 pub struct ArticleRecord {
     pub id: i64,
     pub kind: String,
+    pub tags: Vec<Option<String>>,
+    pub is_trending: Option<bool>,
+    pub is_insight: Option<bool>,
+    pub is_recommend: Option<bool>,
     pub cover_url: Option<String>,
     pub title: String,
-    pub category_id: Option<i32>,
-    pub author_id: i64,
     pub summary: Option<String>,
     pub text: Option<String>,
     pub text_url: Option<String>,
+    pub author_id: i64,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
 
 
-pub(crate) async fn insert(client: &Client, article_courier: courier::ArticleCourier, user_id: i64) -> Result<ArticleRecord, ServiceError> {
+pub(crate) async fn insert(client: &Client, article_courier: courier::ArticleCourier, author_id: i64) -> Result<ArticleRecord, ServiceError> {
     let stmt = r#"
         INSERT INTO
             article (
                 kind,
+                tags,
+                is_trending,
+                is_insight,
+                is_recommend,
                 cover_url,
                 title,
-                category_id,
                 summary,
                 text,
                 text_url,
                 author_id
             )
         VALUES
-            ($1, $2, $3, $4, $5, $6, $7, $8)
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING *;
     "#;
 
@@ -49,13 +55,16 @@ pub(crate) async fn insert(client: &Client, article_courier: courier::ArticleCou
             stmt,
             &[
                 &article_courier.kind,
+                &article_courier.tags,
+                &article_courier.is_trending,
+                &article_courier.is_insight,
+                &article_courier.is_recommend,
                 &article_courier.cover_url,
                 &article_courier.title,
-                &article_courier.category_id,
                 &article_courier.summary,
                 &article_courier.text,
                 &article_courier.text_url,
-                &user_id
+                &author_id
             ],
         )
         .await?;
@@ -65,7 +74,7 @@ pub(crate) async fn insert(client: &Client, article_courier: courier::ArticleCou
     Ok(article_record)
 }
 
-pub async fn select_by_id(client: &Client, user_id: i64) -> Result<Vec<ArticleRecord>, ServiceError> {
+pub async fn select_by_author_id(client: &Client, user_id: i64) -> Result<Vec<ArticleRecord>, ServiceError> {
     let stmt = r#"
         SELECT
             *
@@ -146,16 +155,16 @@ pub(crate) async fn select_paginated(client: &Client, page_number: i64, page_siz
         ORDER BY
             created_at DESC
         LIMIT
-            $2
+            $1
         OFFSET
-            $1;
+            $2;
     "#;
 
 
     let offset = page_number * page_size;
 
     let rows = client
-        .query(stmt, &[&offset, &page_size])
+        .query(stmt, &[&page_size, &offset])
         .await?;
 
     return if rows.is_empty() {

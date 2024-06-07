@@ -16,7 +16,7 @@ use tokio_postgres::NoTls;
 
 use biz::account::handler::{login, register};
 use crate::biz::ai::handler::get_ai_response;
-use crate::biz::article::handler::{create_article, read_owned_article};
+use crate::biz::article::handler::{create_article, read_article_owned, read_article_paginated};
 use crate::biz::article_category::handler::read_all_category;
 use crate::biz::behavior::handler::{create_behavior, read_all_behavior_record, read_paginated_behavior};
 use crate::biz::diet::handler::{create_diet_record, read_all_diet_record, read_paginated_diet_record};
@@ -141,7 +141,8 @@ async fn main() -> io::Result<()> {
         let article_scope = web::scope("/article")
             .wrap(JwtMiddleware)
             .service(create_article)
-            .service(read_owned_article)
+            .service(read_article_owned)
+            .service(read_article_paginated)
             .service(
                 web::scope("/category")
                     .service(read_all_category)
