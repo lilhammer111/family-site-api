@@ -74,3 +74,18 @@ impl Into<UserRecorder> for UserJson {
         }
     }
 }
+
+#[derive(Serialize, Debug, Deserialize, Default)]
+pub struct UserPublicCourier {
+    pub username: String,
+    pub avatar_url: Option<String>,
+}
+
+impl From<UserRecorder> for UserPublicCourier {
+    fn from(ur: UserRecorder) -> Self {
+        UserPublicCourier {
+            username: ur.username,
+            avatar_url: ur.avatar_url,
+        }
+    }
+}

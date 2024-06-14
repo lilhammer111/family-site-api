@@ -2,14 +2,14 @@ use actix_web::{Error, get, HttpRequest, HttpResponse, put, web};
 use crate::AppState;
 use log::debug;
 use crate::biz::courier::{HappyCourier};
-use crate::biz::user::courier::{UserQuery, UserJson, UserResp};
+use crate::biz::user::courier::{UserQuery, UserJson, UserResp, UserPublicCourier};
 use crate::biz::user::recorder::{query_account_by_id, select_many, update_account};
 use crate::biz::internal::{extract_user_id, get_pg};
 use serde_querystring_actix;
 use serde_querystring_actix::QueryString;
 
 #[get("")]
-async fn get_user_info(req: HttpRequest, app_state: web::Data<AppState>) -> Result<HttpResponse, Error> {
+async fn get_current_user(req: HttpRequest, app_state: web::Data<AppState>) -> Result<HttpResponse, Error> {
     let pg_client = get_pg(&app_state).await?;
 
     let user_id = extract_user_id(req)?;
@@ -22,6 +22,27 @@ async fn get_user_info(req: HttpRequest, app_state: web::Data<AppState>) -> Resu
         HttpResponse::Ok()
             .json(
                 resp
+            )
+    )
+}
+
+#[get("/{user_id}")]
+async fn use_public_info(user_id: web::Path<i64>, app_state: web::Data<AppState>) -> Result<HttpResponse, Error> {
+    let pg_client = get_pg(&app_state).await?;
+
+    let user_id = user_id.into_inner();
+
+    let user_record = query_account_by_id(&pg_client, user_id).await?;
+
+    let resp: UserPublicCourier = user_record.into();
+
+    Ok(
+        HttpResponse::Ok()
+            .json(
+                HappyCourier::build()
+                    .message("Success to get user public info")
+                    .data(resp)
+                    .done()
             )
     )
 }

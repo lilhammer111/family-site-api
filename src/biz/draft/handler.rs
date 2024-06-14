@@ -2,10 +2,8 @@ use actix_web::{Error, get, HttpRequest, HttpResponse, post, web};
 use crate::AppState;
 use super::{courier, recorder};
 use crate::biz::courier::{HappyCourier, SadCourier};
-use crate::biz::draft::recorder::DraftRecord;
 use crate::biz::internal;
 use crate::biz::internal::get_pg;
-use crate::infra::error::error::ServiceError;
 
 #[post("")]
 pub async fn create_draft(req: HttpRequest, app_state: web::Data<AppState>, req_body: web::Json<courier::DraftCourier>) -> Result<HttpResponse, Error> {

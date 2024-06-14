@@ -21,10 +21,11 @@ use crate::biz::article_category::handler::read_all_category;
 use crate::biz::behavior::handler::{create_behavior, read_all_behavior_record, read_paginated_behavior};
 use crate::biz::diet::handler::{create_diet_record, read_all_diet_record, read_paginated_diet_record};
 use crate::biz::draft::handler::{create_draft, read_draft_owned};
-use crate::biz::user::handler::{get_user_info, get_user_info_in_batches, update_user_info};
+use crate::biz::user::handler::{get_current_user, get_user_info_in_batches, update_user_info, use_public_info};
 use crate::biz::file::handler::{save_document, save_image};
 use crate::biz::journal::handler::{create_journal, read_paginated_journal};
 use crate::biz::health::handler::{create_health_record, read_all_health_record, read_health_record_paginated};
+use crate::biz::remark::handler::{create_remark, read_remark_paginated};
 use crate::biz::wish::handler::{create_wish, get_paginated_wish};
 use crate::infra::{
     init::Initializer,
@@ -98,8 +99,9 @@ async fn main() -> io::Result<()> {
         let user_scope = web::scope("/user")
             .wrap(JwtMiddleware)
             .service(get_user_info_in_batches)
-            .service(get_user_info)
-            .service(update_user_info);
+            .service(get_current_user)
+            .service(update_user_info)
+            .service(use_public_info);
 
         let file_scope = web::scope("/file")
             .wrap(JwtMiddleware)
@@ -153,6 +155,12 @@ async fn main() -> io::Result<()> {
             .service(create_draft)
             .service(read_draft_owned);
 
+
+        let remark_scope = web::scope("/remark")
+            .wrap(JwtMiddleware)
+            .service(create_remark)
+            .service(read_remark_paginated);
+
         let api_service = web::scope("/api")
             .service(account_scope)
             .service(user_scope)
@@ -164,7 +172,8 @@ async fn main() -> io::Result<()> {
             .service(behavior_scope)
             .service(ai_scope)
             .service(article_scope)
-            .service(draft_scope);
+            .service(draft_scope)
+            .service(remark_scope);
 
         let static_file_service = web::scope("/static")
             .service(

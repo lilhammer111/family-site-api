@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::biz::courier::PaginateQuery;
+// use crate::biz::courier::PaginateQuery;
 
 #[derive(Serialize, Debug, Deserialize)]
 pub struct ArticleCourier {
@@ -15,6 +15,6 @@ pub struct ArticleCourier {
     pub text_url: Option<String>,
 }
 
-pub struct ArticleFilter {
-    pub paginate: PaginateQuery,
-}
+// pub struct ArticleFilter {
+//     pub paginate: PaginateQuery,
+// }

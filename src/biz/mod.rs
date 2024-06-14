@@ -12,4 +12,5 @@ pub mod ai;
 pub mod article;
 pub mod article_category;
 pub mod draft;
+pub mod remark;
 
